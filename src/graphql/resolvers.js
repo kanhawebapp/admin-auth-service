@@ -5718,7 +5718,6 @@ sessionDate: session.createdAt,
       // --------------------------------
       // DEBIT ASTROLOGER WALLET
       // --------------------------------
-         console.log("--------idddddddddddddddddddddddd------------------",astrologerWallet.id);
       const updatedAstrologerWallet =
         await tx.astrologerWallet.update({
           where: {
