@@ -344,6 +344,8 @@ export const resolvers = {
           query,
           mobile,
           filterType,
+           minBalance,
+  maxBalance,
           startDate,
           endDate,
           page = 1,
@@ -355,7 +357,19 @@ export const resolvers = {
         const skip = (safePage - 1) * safeLimit;
 
         const where = {};
+if (minBalance !== undefined || maxBalance !== undefined) {
+  where.wallet = {
+    balanceCoins: {},
+  };
 
+  if (minBalance !== undefined && minBalance !== null) {
+    where.wallet.balanceCoins.gte = Number(minBalance);
+  }
+
+  if (maxBalance !== undefined && maxBalance !== null) {
+    where.wallet.balanceCoins.lte = Number(maxBalance);
+  }
+}
         // ---------------- TEXT SEARCH ----------------
         if (query) {
           where.OR = [
