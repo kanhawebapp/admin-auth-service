@@ -9239,7 +9239,7 @@ sessionDate: session.createdAt,
 
       return true;
     },
-    updateUserStatus: async (_, { userId, isActive }, { prisma }) => {
+    updateUserStatus: async (_, { userId, isActive, isDeleted}, { prisma }) => {
       return prisma.user.update({
         where: {
           id: userId,
