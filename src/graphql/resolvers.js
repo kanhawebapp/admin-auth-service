@@ -1980,6 +1980,10 @@ if (minBalance !== undefined || maxBalance !== undefined) {
   try {
     const skip = (page - 1) * limit;
 
+    // =========================================================
+    // 1. BUILD WHERE CLAUSE
+    // =========================================================
+
     const whereClause = {
       userWalletId: {
         not: null,
@@ -1996,7 +2000,7 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       whereClause.type = type.toUpperCase();
     }
 
-    if (amount) {
+    if (amount !== undefined && amount !== null) {
       whereClause.amount = Number(amount);
     }
 
@@ -2016,10 +2020,14 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       }
     }
 
+    // =========================================================
+    // 2. DATE FILTER
+    // =========================================================
+
     const now = new Date();
 
     if (filterType === "WEEK") {
-      const weekStart = new Date();
+      const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - 7);
 
       whereClause.createdAt = {
@@ -2029,7 +2037,7 @@ if (minBalance !== undefined || maxBalance !== undefined) {
     }
 
     if (filterType === "MONTH") {
-      const monthStart = new Date();
+      const monthStart = new Date(now);
       monthStart.setMonth(now.getMonth() - 1);
 
       whereClause.createdAt = {
@@ -2039,7 +2047,7 @@ if (minBalance !== undefined || maxBalance !== undefined) {
     }
 
     if (filterType === "YEAR") {
-      const yearStart = new Date();
+      const yearStart = new Date(now);
       yearStart.setFullYear(now.getFullYear() - 1);
 
       whereClause.createdAt = {
@@ -2055,13 +2063,14 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       };
     }
 
-    // ---------------------------------------------------------
-    // 1. GET PAGINATED TRANSACTIONS
-    // ---------------------------------------------------------
+    // =========================================================
+    // 3. GET PAGINATED TRANSACTIONS
+    // =========================================================
 
     const [data, totalCount] = await Promise.all([
       prisma.walletTransaction.findMany({
         where: whereClause,
+
         include: {
           userWallet: {
             include: {
@@ -2074,14 +2083,18 @@ if (minBalance !== undefined || maxBalance !== undefined) {
               },
             },
           },
+
           rechargePack: true,
+
           payment: true,
+
           session: {
             select: {
               id: true,
             },
           },
         },
+
         orderBy: [
           {
             createdAt: "desc",
@@ -2090,6 +2103,7 @@ if (minBalance !== undefined || maxBalance !== undefined) {
             id: "desc",
           },
         ],
+
         skip,
         take: limit,
       }),
@@ -2099,9 +2113,9 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       }),
     ]);
 
-    // ---------------------------------------------------------
-    // 2. GET ALL TRANSACTIONS FOR THESE WALLETS
-    // ---------------------------------------------------------
+    // =========================================================
+    // 4. GET WALLET IDS
+    // =========================================================
 
     const walletIds = [
       ...new Set(
@@ -2111,6 +2125,13 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       ),
     ];
 
+    // =========================================================
+    // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
+    //
+    // IMPORTANT:
+    // Include updatedBalance from DB
+    // =========================================================
+
     const allWalletTransactions =
       walletIds.length > 0
         ? await prisma.walletTransaction.findMany({
@@ -2119,13 +2140,16 @@ if (minBalance !== undefined || maxBalance !== undefined) {
                 in: walletIds,
               },
             },
+
             select: {
               id: true,
               userWalletId: true,
               type: true,
               coins: true,
+              updatedBalance: true,
               createdAt: true,
             },
+
             orderBy: [
               {
                 createdAt: "desc",
@@ -2137,9 +2161,9 @@ if (minBalance !== undefined || maxBalance !== undefined) {
           })
         : [];
 
-    // ---------------------------------------------------------
-    // 3. GET CURRENT WALLET BALANCES
-    // ---------------------------------------------------------
+    // =========================================================
+    // 6. GET CURRENT WALLET BALANCE
+    // =========================================================
 
     const wallets = walletIds.length
       ? await prisma.userWallet.findMany({
@@ -2148,6 +2172,7 @@ if (minBalance !== undefined || maxBalance !== undefined) {
               in: walletIds,
             },
           },
+
           select: {
             id: true,
             balanceCoins: true,
@@ -2164,13 +2189,10 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       );
     });
 
-    // ---------------------------------------------------------
-    // 4. CALCULATE HISTORICAL UPDATED BALANCE
-    // ---------------------------------------------------------
+    // =========================================================
+    // 7. GROUP TRANSACTIONS BY WALLET
+    // =========================================================
 
-    const updatedBalanceMap = new Map();
-
-    // Group transactions wallet-wise
     const transactionsByWallet = new Map();
 
     allWalletTransactions.forEach((transaction) => {
@@ -2183,14 +2205,63 @@ if (minBalance !== undefined || maxBalance !== undefined) {
         .push(transaction);
     });
 
+    // =========================================================
+    // 8. CALCULATE ONLY MISSING HISTORICAL BALANCES
+    // =========================================================
+
+    const updatedBalanceMap = new Map();
+
     transactionsByWallet.forEach((transactions, walletId) => {
       let runningBalance =
         currentBalanceMap.get(walletId) || 0;
 
-      // Transactions are DESC:
-      // latest -> oldest
-      transactions.forEach((transaction) => {
-        // Balance AFTER this transaction
+      /*
+       * Transactions are DESC:
+       *
+       * latest
+       * ↓
+       * oldest
+       */
+
+      for (const transaction of transactions) {
+        // -----------------------------------------------------
+        // CASE 1:
+        // Database already has historical balance
+        // -----------------------------------------------------
+
+        if (
+          transaction.updatedBalance !== null &&
+          transaction.updatedBalance !== undefined
+        ) {
+          const storedBalance =
+            Number(transaction.updatedBalance);
+
+          updatedBalanceMap.set(
+            transaction.id,
+            storedBalance,
+          );
+
+          /*
+           * Very important:
+           *
+           * This becomes our historical anchor.
+           *
+           * Do not continue calculating backwards from
+           * potentially inconsistent legacy data.
+           */
+
+          runningBalance = storedBalance;
+
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // CASE 2:
+        // updatedBalance is NULL
+        //
+        // Calculate balance AFTER this transaction
+        // -----------------------------------------------------
+
         updatedBalanceMap.set(
           transaction.id,
           runningBalance,
@@ -2198,36 +2269,33 @@ if (minBalance !== undefined || maxBalance !== undefined) {
 
         const coins = Number(transaction.coins || 0);
 
-        // ---------------------------------------------------
-        // IMPORTANT:
-        // Change these transaction types according to your
-        // actual TransactionType enum.
-        // ---------------------------------------------------
+        const transactionType =
+          String(transaction.type || "").toUpperCase();
 
-        const type = String(transaction.type || "").toUpperCase();
-
-        const isCredit =
-          type === "RECHARGE" ||
-          type === "CREDIT" ||
-          type === "REFUND";
-
-        const isDebit =
-          type === "DEBIT" ||
-          type === "CHAT" ||
-          type === "CALL" ||
-          type === "SESSION";
-
-        if (isCredit) {
+        // CREDIT / REFUND increase wallet
+        if (
+          transactionType === "CREDIT" ||
+          transactionType === "REFUND" ||
+          transactionType === "RECHARGE"
+        ) {
           runningBalance -= coins;
-        } else if (isDebit) {
+        }
+
+        // DEBIT decreases wallet
+        else if (
+          transactionType === "DEBIT" ||
+          transactionType === "CHAT" ||
+          transactionType === "CALL" ||
+          transactionType === "SESSION"
+        ) {
           runningBalance += coins;
         }
-      });
+      }
     });
 
-    // ---------------------------------------------------------
-    // 5. ADD updatedBalance TO RESPONSE
-    // ---------------------------------------------------------
+    // =========================================================
+    // 9. FINAL RESPONSE
+    // =========================================================
 
     const finalData = data.map((transaction) => ({
       ...transaction,
@@ -2237,9 +2305,9 @@ if (minBalance !== undefined || maxBalance !== undefined) {
         Number(transaction.userWallet?.balanceCoins || 0),
     }));
 
-    // ---------------------------------------------------------
-    // 6. RETURN
-    // ---------------------------------------------------------
+    // =========================================================
+    // 10. RETURN
+    // =========================================================
 
     return {
       data: finalData,
@@ -2248,14 +2316,16 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       totalPages: Math.ceil(totalCount / limit),
     };
   } catch (err) {
-    console.error("getUserWalletTransactions error:", err);
+    console.error(
+      "getUserWalletTransactions error:",
+      err,
+    );
 
     throw new Error(
       err.message || "Failed to fetch transactions",
     );
   }
 },
-
     // getAstrologerWalletTransactions: async (
     //   _,
     //   {
