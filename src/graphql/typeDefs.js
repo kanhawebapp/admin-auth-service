@@ -277,6 +277,8 @@ isEligibleAudio: Boolean!
     endDate: String
     page: Int
     limit: Int
+      minBalance: Float
+  maxBalance: Float
   }
 
   type UserList {
