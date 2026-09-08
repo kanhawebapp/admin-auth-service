@@ -2826,7 +2826,7 @@ sessionDate: DateTime!
       serviceId: ID!
       astrologers: [ServiceAstrologerInput!]!
     ): Boolean!
-    updateUserStatus(userId: ID!, isActive: Boolean!): User!
+    updateUserStatus(userId: ID!, isActive: Boolean!,isDeleted: Boolean!): User!
     manageAstrologerWallet(
       astrologerId: ID!
       amount: Float!

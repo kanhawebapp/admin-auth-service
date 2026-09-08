@@ -9246,6 +9246,8 @@ sessionDate: session.createdAt,
         },
         data: {
           isActive,
+          isDeleted
+          
         },
       });
     },
