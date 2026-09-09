@@ -697,6 +697,7 @@ isEligibleAudio: Boolean!
     status: Boolean
     createdAt: String
     updatedAt: String
+      bannerType: BannerType
   }
 
   input CreateBannerInput {
@@ -707,8 +708,12 @@ isEligibleAudio: Boolean!
     bannerlink: String
     language: String
     imageUrl: String
+      bannerType: BannerType
   }
-
+enum BannerType {
+  DESKTOP
+  MOBILE
+}
   input UpdateBannerInput {
     heading: String
     subheading: String
@@ -718,6 +723,7 @@ isEligibleAudio: Boolean!
     language: String
     imageUrl: String
     status: Boolean
+      bannerType: BannerType
   }
 
   #-------------------- pricing --------------#
