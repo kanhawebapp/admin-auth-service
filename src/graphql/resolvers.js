@@ -8188,6 +8188,7 @@ sessionDate: session.createdAt,
           bannerlink: input.bannerlink,
           language: input.language,
           imageUrl: input.imageUrl,
+          bannerType: input.bannerType,
         },
       });
     },
