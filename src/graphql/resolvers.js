@@ -478,104 +478,122 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       }
     },
 
-    getAstrologerListBySearch: async (_, { searchInput }, context) => {
-      const { prisma } = context;
-      await checkPermission(context, "astrologer.read");
-      try {
-        if (!context) throw new Error("Not authorized");
+   getAstrologerListBySearch: async (_, { searchInput }, context) => {
+  const { prisma } = context;
 
-        const {
-          query,
-          sortField,
-          sortOrder,
-          limit = 50,
-          page = 1,
-        } = searchInput;
+  await checkPermission(context, "astrologer-list.read");
 
-        const safeLimit = Math.min(limit, 50);
-        const safePage = Math.max(page, 1);
-        const skip = (safePage - 1) * safeLimit;
+  try {
+    if (!context) {
+      throw new Error("Not authorized");
+    }
 
-        let orderBy = {};
+    const {
+      query,
+      sortField,
+      sortOrder,
+      limit = 50,
+      page = 1,
+    } = searchInput;
 
-        if (sortField) {
-          switch (sortField) {
-            case "EXPERIENCE":
-              orderBy.experience = sortOrder === "ASC" ? "asc" : "desc";
-              break;
-            case "PRICE":
-              orderBy.price = sortOrder === "ASC" ? "asc" : "desc";
-              break;
-            case "RATING":
-              orderBy.rating = sortOrder === "ASC" ? "asc" : "desc";
-              break;
-          }
-        } else {
+    const safeLimit = Math.min(limit, 50);
+    const safePage = Math.max(page, 1);
+    const skip = (safePage - 1) * safeLimit;
+
+    let orderBy = {};
+
+    if (sortField) {
+      switch (sortField) {
+        case "EXPERIENCE":
+          orderBy.experience =
+            sortOrder === "ASC" ? "asc" : "desc";
+          break;
+
+        case "PRICE":
+          orderBy.price =
+            sortOrder === "ASC" ? "asc" : "desc";
+          break;
+
+        case "RATING":
+          orderBy.rating =
+            sortOrder === "ASC" ? "asc" : "desc";
+          break;
+
+        default:
           orderBy.createdAt = "desc";
-        }
-
-        const where = query
-          ? {
-              OR: [
-                {
-                  name: {
-                    contains: query,
-                    mode: "insensitive",
-                  },
-                },
-                {
-                  displayName: {
-                    contains: query,
-                    mode: "insensitive",
-                  },
-                },
-                {
-                  email: {
-                    contains: query,
-                    mode: "insensitive",
-                  },
-                },
-                {
-                  contactNo: {
-                    contains: query,
-                  },
-                },
-                {
-                  skills: {
-                    has: query,
-                  },
-                },
-                {
-                  languages: {
-                    has: query,
-                  },
-                },
-              ],
-            }
-          : {};
-
-        const [astrologers, totalCount] = await Promise.all([
-          prisma.astrologer.findMany({
-            where,
-            orderBy,
-            skip,
-            take: safeLimit,
-          }),
-          prisma.astrologer.count({ where }),
-        ]);
-
-        const response = {
-          data: astrologers,
-          totalCount,
-          currentPage: safePage,
-          totalPages: Math.ceil(totalCount / safeLimit),
-        };
-
-        return response;
-      } catch (error) {
-        throw error;
       }
-    },
+    } else {
+      orderBy.createdAt = "desc";
+    }
+
+    // Always exclude deleted astrologers
+    const where = {
+      isDeleted: false,
+
+      ...(query
+        ? {
+            OR: [
+              {
+                name: {
+                  contains: query,
+                  mode: "insensitive",
+                },
+              },
+              {
+                displayName: {
+                  contains: query,
+                  mode: "insensitive",
+                },
+              },
+              {
+                email: {
+                  contains: query,
+                  mode: "insensitive",
+                },
+              },
+              {
+                contactNo: {
+                  contains: query,
+                },
+              },
+              {
+                skills: {
+                  has: query,
+                },
+              },
+              {
+                languages: {
+                  has: query,
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [astrologers, totalCount] = await Promise.all([
+      prisma.astrologer.findMany({
+        where,
+        orderBy,
+        skip,
+        take: safeLimit,
+      }),
+
+      prisma.astrologer.count({
+        where,
+      }),
+    ]);
+
+    return {
+      data: astrologers,
+      totalCount,
+      currentPage: safePage,
+      totalPages: Math.ceil(totalCount / safeLimit),
+    };
+  } catch (error) {
+    throw error;
+  }
+},
 
     getAstrologerEarnings: async (_, { searchInput }) => {
       try {
