@@ -6805,7 +6805,7 @@ sessionDate: session.createdAt,
       }
 
       try {
-        await checkPermission(context, "astrologer.create");
+        await checkPermission(context, "add-astrologer.create");
         const chatPricing = data.pricing.find((p) => p.type === "CHAT");
         const callPricing = data.pricing.find((p) => p.type === "CALL");
         const videoPricing = data.pricing.find((p) => p.type === "VIDEO");
@@ -6950,7 +6950,7 @@ sessionDate: session.createdAt,
       const { prisma } = context;
 
       try {
-        await checkPermission(context, "astrologer.update");
+        await checkPermission(context, "add-astrologer.update");
 
         const existing = await prisma.astrologer.findUnique({
           where: { id: astrologerId },
