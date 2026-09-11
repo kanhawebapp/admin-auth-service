@@ -6598,6 +6598,7 @@ sessionDate: session.createdAt,
 
     // ================= ADMIN LOGIN =================
     loginStaff: async (_, { email, password }, { res }) => {
+      console.log("loginStaff-------------:",email,password);
       const staff = await prisma.staff.findUnique({
         where: { email },
         include: { role: true },
