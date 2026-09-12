@@ -207,6 +207,7 @@ isEligibleChat: Boolean!
 isEligibleCall: Boolean!
 isEligibleVideo: Boolean!
 isEligibleAudio: Boolean!
+isDeleted: Boolean!
     createdAt: DateTime
     updatedAt: DateTime
   }
