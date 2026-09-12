@@ -523,9 +523,8 @@ export const resolvers = {
           orderBy.createdAt = "desc";
         }
 
-        // Always exclude deleted astrologers
-        const where = {
-          isDeleted: false,
+       
+        const where = {        
 
           ...(query
             ? {
@@ -5330,6 +5329,26 @@ export const resolvers = {
   // **********************************************START MUTATION**********************************
 
   Mutation: {
+restoreAstrologer: async (_, { astrologerId }, context) => {
+  const { prisma } = context;
+
+  await checkPermission(context, "astrologer-list.update");
+
+  try {
+    await prisma.astrologer.update({
+      where: {
+        id: astrologerId,
+      },
+      data: {
+        isDeleted: false,
+      },
+    });
+
+    return true;
+  } catch (error) {
+    throw new Error(error.message || "Failed to activate astrologer");
+  }
+},
     createRefundRequest: async (_, { input }, context) => {
       try {
         const { prisma, user } = context;
@@ -6750,17 +6769,28 @@ export const resolvers = {
 
     // ================= ADD ASTROLOGER =================
     addAstrologer: async (_, { data }, context) => {
-      const { prisma } = context;
+  const { prisma } = context;
 
-      if (data.applicationId) {
-        const application = await prisma.astrologerApplication.findUnique({
-          where: { id: data.applicationId },
-        });
+let application = null;
 
-        if (application?.astrologerId) {
-          throw new Error("Astrologer already created for this application");
-        }
-      }
+if (data.applicationId) {
+  application = await prisma.astrologerApplication.findUnique({
+    where: {
+      id: data.applicationId,
+    },
+    include: {
+      kycDetail: true,
+    },
+  });
+
+  if (!application) {
+    throw new Error("Astrologer application not found");
+  }
+
+  if (application.astrologerId) {
+    throw new Error("Astrologer already created for this application");
+  }
+}
 
       try {
         await checkPermission(context, "add-astrologer.create");
@@ -6823,59 +6853,109 @@ export const resolvers = {
             },
 
             // FIX: Only create documents if present
-            documents: data.documents
-              ? {
-                  create: [
-                    ...(data.documents?.aadhaar
-                      ? [
-                          {
-                            documentType: "AADHAAR",
-                            documentUrl: data.documents.aadhaar,
-                          },
-                        ]
-                      : []),
-
-                    ...(data.documents?.panCard
-                      ? [
-                          {
-                            documentType: "PAN",
-                            documentUrl: data.documents.panCard,
-                          },
-                        ]
-                      : []),
-
-                    ...(data.documents?.passbook
-                      ? [
-                          {
-                            documentType: "PASSBOOK",
-                            documentUrl: data.documents.passbook,
-                          },
-                        ]
-                      : []),
-                  ],
-                }
-              : undefined,
-
-            // FIX: Move bankDetails → KYC
-            kycDetail: data.bankDetails
-              ? {
-                  create: {
-                    accountHolderName: data.bankDetails.accountHolderName,
-                    accountNumber: data.bankDetails.accountNumber,
-                    bankName: data.bankDetails.bankName,
-                    ifsc: data.bankDetails.ifscCode,
-                    panNumber: data.bankDetails.panCardNumber,
-                    branchName: data.bankDetails.branchName,
-                    status: data.bankDetails.status,
-
-                    ...(data.applicationId && {
-                      application: {
-                        connect: { id: data.applicationId },
+            documents: {
+              create: [
+                ...(data.documents?.aadhaar ||
+                application?.kycDetail?.aadhaarImage
+                  ? [
+                      {
+                        documentType: "AADHAAR",
+                        documentUrl:
+                          data.documents?.aadhaar ||
+                          application?.kycDetail?.aadhaarImage,
                       },
-                    }),
-                  },
-                }
-              : undefined,
+                    ]
+                  : []),
+
+                ...(data.documents?.panCard || application?.kycDetail?.panImage
+                  ? [
+                      {
+                        documentType: "PAN",
+                        documentUrl:
+                          data.documents?.panCard ||
+                          application?.kycDetail?.panImage,
+                      },
+                    ]
+                  : []),
+
+                ...(data.documents?.passbook ||
+                application?.kycDetail?.passbookImage
+                  ? [
+                      {
+                        documentType: "PASSBOOK",
+                        documentUrl:
+                          data.documents?.passbook ||
+                          application?.kycDetail?.passbookImage,
+                      },
+                    ]
+                  : []),
+              ],
+            },
+
+            kycDetail:
+              data.bankDetails || application?.kycDetail
+                ? {
+                    create: {
+                      accountHolderName:
+                        data.bankDetails?.accountHolderName ||
+                        application?.kycDetail?.accountHolderName ||
+                        "",
+
+                      accountNumber:
+                        data.bankDetails?.accountNumber ||
+                        application?.kycDetail?.accountNumber ||
+                        "",
+
+                      bankName:
+                        data.bankDetails?.bankName ||
+                        application?.kycDetail?.bankName ||
+                        "",
+
+                      ifsc:
+                        data.bankDetails?.ifscCode ||
+                        application?.kycDetail?.ifsc ||
+                        "",
+
+                      panNumber:
+                        data.bankDetails?.panCardNumber ||
+                        application?.kycDetail?.panNumber ||
+                        "",
+
+                      branchName:
+                        data.bankDetails?.branchName ||
+                        application?.kycDetail?.branchName ||
+                        "",
+
+                      status:
+                        data.bankDetails?.status ||
+                        application?.kycDetail?.status ||
+                        "VERIFIED",
+
+                      aadhaarImage:
+                        data.documents?.aadhaar ||
+                        application?.kycDetail?.aadhaarImage ||
+                        null,
+
+                      panImage:
+                        data.documents?.panCard ||
+                        application?.kycDetail?.panImage ||
+                        null,
+
+                      passbookImage:
+                        data.documents?.passbook ||
+                        application?.kycDetail?.passbookImage ||
+                        null,
+
+                      ...(data.applicationId && {
+                        application: {
+                          connect: {
+                            id: data.applicationId,
+                          },
+                        },
+                      }),
+                    },
+                  }
+                : undefined,
 
             // optional audit
             // createdBy: context.user.id,
@@ -6922,10 +7002,10 @@ export const resolvers = {
         if (!existing) {
           throw new Error("Astrologer not found");
         }
-        const chatPricing = data.pricing.find((p) => p.type === "CHAT");
-        const callPricing = data.pricing.find((p) => p.type === "CALL");
-        const videoPricing = data.pricing.find((p) => p.type === "VIDEO");
-        const audioPricing = data.pricing.find((p) => p.type === "AUDIO");
+        const chatPricing = data.pricing?.find((p) => p.type === "CHAT");
+        const callPricing = data.pricing?.find((p) => p.type === "CALL");
+        const videoPricing = data.pricing?.find((p) => p.type === "VIDEO");
+        const audioPricing = data.pricing?.find((p) => p.type === "AUDIO");
         const updatedAstrologer = await prisma.astrologer.update({
           where: {
             id: astrologerId,
@@ -7002,29 +7082,46 @@ export const resolvers = {
                       },
 
                       update: {
-                        accountHolderName: data.bankDetails?.accountHolderName,
+                        accountHolderName:
+                          data.bankDetails?.accountHolderName ??
+                          existing.kycDetail?.accountHolderName,
 
-                        accountNumber: data.bankDetails?.accountNumber,
+                        accountNumber:
+                          data.bankDetails?.accountNumber ??
+                          existing.kycDetail?.accountNumber,
 
-                        bankName: data.bankDetails?.bankName,
+                        bankName:
+                          data.bankDetails?.bankName ??
+                          existing.kycDetail?.bankName,
 
-                        ifsc: data.bankDetails?.ifscCode,
+                        ifsc:
+                          data.bankDetails?.ifscCode ??
+                          existing.kycDetail?.ifsc,
 
-                        branchName: data.bankDetails?.branchName,
+                        branchName:
+                          data.bankDetails?.branchName ??
+                          existing.kycDetail?.branchName,
 
-                        panNumber: data.bankDetails?.panCardNumber,
+                        panNumber:
+                          data.bankDetails?.panCardNumber ??
+                          existing.kycDetail?.panNumber,
 
-                        aadhaarImage: data.documents?.aadhaar,
+                        aadhaarImage:
+                          data.documents?.aadhaar ??
+                          existing.kycDetail?.aadhaarImage,
 
-                        panImage: data.documents?.panCard,
+                        panImage:
+                          data.documents?.panCard ??
+                          existing.kycDetail?.panImage,
 
-                        passbookImage: data.documents?.passbook,
+                        passbookImage:
+                          data.documents?.passbook ??
+                          existing.kycDetail?.passbookImage,
                       },
                     },
                   }
                 : undefined,
 
-            // PRICING
             pricing: data.pricing?.length
               ? {
                   deleteMany: {},
@@ -7043,14 +7140,81 @@ export const resolvers = {
                 }
               : undefined,
           },
+
           include: {
             addresses: true,
             pricing: true,
             kycDetail: true,
           },
         });
+        if (data.documents?.aadhaar) {
+          await prisma.astrologerDocument.upsert({
+            where: {
+              astrologerId_documentType: {
+                astrologerId,
+                documentType: "AADHAAR",
+              },
+            },
+            update: {
+              documentUrl: data.documents.aadhaar,
+            },
+            create: {
+              astrologerId,
+              documentType: "AADHAAR",
+              documentUrl: data.documents.aadhaar,
+            },
+          });
+        }
 
-        return updatedAstrologer;
+        if (data.documents?.panCard) {
+          await prisma.astrologerDocument.upsert({
+            where: {
+              astrologerId_documentType: {
+                astrologerId,
+                documentType: "PAN",
+              },
+            },
+            update: {
+              documentUrl: data.documents.panCard,
+            },
+            create: {
+              astrologerId,
+              documentType: "PAN",
+              documentUrl: data.documents.panCard,
+            },
+          });
+        }
+
+        if (data.documents?.passbook) {
+          await prisma.astrologerDocument.upsert({
+            where: {
+              astrologerId_documentType: {
+                astrologerId,
+                documentType: "PASSBOOK",
+              },
+            },
+            update: {
+              documentUrl: data.documents.passbook,
+            },
+            create: {
+              astrologerId,
+              documentType: "PASSBOOK",
+              documentUrl: data.documents.passbook,
+            },
+          });
+        }
+
+        const finalAstrologer = await prisma.astrologer.findUnique({
+          where: { id: astrologerId },
+          include: {
+            pricing: true,
+            addresses: true,
+            kycDetail: true,
+            documents: true,
+          },
+        });
+
+        return finalAstrologer;
       } catch (error) {
         throw new Error(error.message || "Failed to update astrologer");
       }
