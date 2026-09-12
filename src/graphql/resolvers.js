@@ -344,8 +344,8 @@ export const resolvers = {
           query,
           mobile,
           filterType,
-           minBalance,
-  maxBalance,
+          minBalance,
+          maxBalance,
           startDate,
           endDate,
           page = 1,
@@ -357,19 +357,19 @@ export const resolvers = {
         const skip = (safePage - 1) * safeLimit;
 
         const where = {};
-if (minBalance !== undefined || maxBalance !== undefined) {
-  where.wallet = {
-    balanceCoins: {},
-  };
+        if (minBalance !== undefined || maxBalance !== undefined) {
+          where.wallet = {
+            balanceCoins: {},
+          };
 
-  if (minBalance !== undefined && minBalance !== null) {
-    where.wallet.balanceCoins.gte = Number(minBalance);
-  }
+          if (minBalance !== undefined && minBalance !== null) {
+            where.wallet.balanceCoins.gte = Number(minBalance);
+          }
 
-  if (maxBalance !== undefined && maxBalance !== null) {
-    where.wallet.balanceCoins.lte = Number(maxBalance);
-  }
-}
+          if (maxBalance !== undefined && maxBalance !== null) {
+            where.wallet.balanceCoins.lte = Number(maxBalance);
+          }
+        }
         // ---------------- TEXT SEARCH ----------------
         if (query) {
           where.OR = [
@@ -478,122 +478,119 @@ if (minBalance !== undefined || maxBalance !== undefined) {
       }
     },
 
-   getAstrologerListBySearch: async (_, { searchInput }, context) => {
-  const { prisma } = context;
+    getAstrologerListBySearch: async (_, { searchInput }, context) => {
+      const { prisma } = context;
 
-  await checkPermission(context, "astrologer-list.read");
+      await checkPermission(context, "astrologer-list.read");
 
-  try {
-    if (!context) {
-      throw new Error("Not authorized");
-    }
+      try {
+        if (!context) {
+          throw new Error("Not authorized");
+        }
 
-    const {
-      query,
-      sortField,
-      sortOrder,
-      limit = 50,
-      page = 1,
-    } = searchInput;
+        const {
+          query,
+          sortField,
+          sortOrder,
+          limit = 50,
+          page = 1,
+        } = searchInput;
 
-    const safeLimit = Math.min(limit, 50);
-    const safePage = Math.max(page, 1);
-    const skip = (safePage - 1) * safeLimit;
+        const safeLimit = Math.min(limit, 50);
+        const safePage = Math.max(page, 1);
+        const skip = (safePage - 1) * safeLimit;
 
-    let orderBy = {};
+        let orderBy = {};
 
-    if (sortField) {
-      switch (sortField) {
-        case "EXPERIENCE":
-          orderBy.experience =
-            sortOrder === "ASC" ? "asc" : "desc";
-          break;
+        if (sortField) {
+          switch (sortField) {
+            case "EXPERIENCE":
+              orderBy.experience = sortOrder === "ASC" ? "asc" : "desc";
+              break;
 
-        case "PRICE":
-          orderBy.price =
-            sortOrder === "ASC" ? "asc" : "desc";
-          break;
+            case "PRICE":
+              orderBy.price = sortOrder === "ASC" ? "asc" : "desc";
+              break;
 
-        case "RATING":
-          orderBy.rating =
-            sortOrder === "ASC" ? "asc" : "desc";
-          break;
+            case "RATING":
+              orderBy.rating = sortOrder === "ASC" ? "asc" : "desc";
+              break;
 
-        default:
-          orderBy.createdAt = "desc";
-      }
-    } else {
-      orderBy.createdAt = "desc";
-    }
-
-    // Always exclude deleted astrologers
-    const where = {
-      isDeleted: false,
-
-      ...(query
-        ? {
-            OR: [
-              {
-                name: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              },
-              {
-                displayName: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              },
-              {
-                email: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              },
-              {
-                contactNo: {
-                  contains: query,
-                },
-              },
-              {
-                skills: {
-                  has: query,
-                },
-              },
-              {
-                languages: {
-                  has: query,
-                },
-              },
-            ],
+            default:
+              orderBy.createdAt = "desc";
           }
-        : {}),
-    };
+        } else {
+          orderBy.createdAt = "desc";
+        }
 
-    const [astrologers, totalCount] = await Promise.all([
-      prisma.astrologer.findMany({
-        where,
-        orderBy,
-        skip,
-        take: safeLimit,
-      }),
+        // Always exclude deleted astrologers
+        const where = {
+          isDeleted: false,
 
-      prisma.astrologer.count({
-        where,
-      }),
-    ]);
+          ...(query
+            ? {
+                OR: [
+                  {
+                    name: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    displayName: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    email: {
+                      contains: query,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    contactNo: {
+                      contains: query,
+                    },
+                  },
+                  {
+                    skills: {
+                      has: query,
+                    },
+                  },
+                  {
+                    languages: {
+                      has: query,
+                    },
+                  },
+                ],
+              }
+            : {}),
+        };
 
-    return {
-      data: astrologers,
-      totalCount,
-      currentPage: safePage,
-      totalPages: Math.ceil(totalCount / safeLimit),
-    };
-  } catch (error) {
-    throw error;
-  }
-},
+        const [astrologers, totalCount] = await Promise.all([
+          prisma.astrologer.findMany({
+            where,
+            orderBy,
+            skip,
+            take: safeLimit,
+          }),
+
+          prisma.astrologer.count({
+            where,
+          }),
+        ]);
+
+        return {
+          data: astrologers,
+          totalCount,
+          currentPage: safePage,
+          totalPages: Math.ceil(totalCount / safeLimit),
+        };
+      } catch (error) {
+        throw error;
+      }
+    },
 
     getAstrologerEarnings: async (_, { searchInput }) => {
       try {
@@ -1980,192 +1977,137 @@ if (minBalance !== undefined || maxBalance !== undefined) {
         orderBy: { createdAt: "desc" },
       });
     },
- getUserWalletTransactions: async (
-  _,
-  {
-    page = 1,
-    limit = 20,
-    type,
-    amount,
-    mobile,
-    userId,
-    filterType,
-    startDate,
-    endDate,
-    onlyRecharge = false,
-  },
-) => {
-  try {
-    const skip = (page - 1) * limit;
-
-    // =========================================================
-    // 1. BUILD WHERE CLAUSE
-    // =========================================================
-
-    const whereClause = {
-      userWalletId: {
-        not: null,
+    getUserWalletTransactions: async (
+      _,
+      {
+        page = 1,
+        limit = 20,
+        type,
+        amount,
+        mobile,
+        userId,
+        filterType,
+        startDate,
+        endDate,
+        onlyRecharge = false,
       },
-    };
+    ) => {
+      try {
+        const skip = (page - 1) * limit;
 
-    if (onlyRecharge) {
-      whereClause.rechargePackId = {
-        not: null,
-      };
-    }
+        // =========================================================
+        // 1. BUILD WHERE CLAUSE
+        // =========================================================
 
-    if (type) {
-      whereClause.type = type.toUpperCase();
-    }
-
-    if (amount !== undefined && amount !== null) {
-      whereClause.amount = Number(amount);
-    }
-
-    if (userId || mobile) {
-      whereClause.userWallet = {};
-
-      if (userId) {
-        whereClause.userWallet.userId = userId;
-      }
-
-      if (mobile) {
-        whereClause.userWallet.user = {
-          mobile: {
-            contains: mobile,
+        const whereClause = {
+          userWalletId: {
+            not: null,
           },
         };
-      }
-    }
 
-    // =========================================================
-    // 2. DATE FILTER
-    // =========================================================
+        if (onlyRecharge) {
+          whereClause.rechargePackId = {
+            not: null,
+          };
+        }
 
-    const now = new Date();
+        if (type) {
+          whereClause.type = type.toUpperCase();
+        }
 
-    if (filterType === "WEEK") {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - 7);
+        if (amount !== undefined && amount !== null) {
+          whereClause.amount = Number(amount);
+        }
 
-      whereClause.createdAt = {
-        gte: weekStart,
-        lte: now,
-      };
-    }
+        if (userId || mobile) {
+          whereClause.userWallet = {};
 
-    if (filterType === "MONTH") {
-      const monthStart = new Date(now);
-      monthStart.setMonth(now.getMonth() - 1);
+          if (userId) {
+            whereClause.userWallet.userId = userId;
+          }
 
-      whereClause.createdAt = {
-        gte: monthStart,
-        lte: now,
-      };
-    }
+          if (mobile) {
+            whereClause.userWallet.user = {
+              mobile: {
+                contains: mobile,
+              },
+            };
+          }
+        }
 
-    if (filterType === "YEAR") {
-      const yearStart = new Date(now);
-      yearStart.setFullYear(now.getFullYear() - 1);
+        // =========================================================
+        // 2. DATE FILTER
+        // =========================================================
 
-      whereClause.createdAt = {
-        gte: yearStart,
-        lte: now,
-      };
-    }
+        const now = new Date();
 
-    if (filterType === "CUSTOM" && startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
+        if (filterType === "WEEK") {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - 7);
 
-    // =========================================================
-    // 3. GET PAGINATED TRANSACTIONS
-    // =========================================================
+          whereClause.createdAt = {
+            gte: weekStart,
+            lte: now,
+          };
+        }
 
-    const [data, totalCount] = await Promise.all([
-      prisma.walletTransaction.findMany({
-        where: whereClause,
+        if (filterType === "MONTH") {
+          const monthStart = new Date(now);
+          monthStart.setMonth(now.getMonth() - 1);
 
-        include: {
-          userWallet: {
+          whereClause.createdAt = {
+            gte: monthStart,
+            lte: now,
+          };
+        }
+
+        if (filterType === "YEAR") {
+          const yearStart = new Date(now);
+          yearStart.setFullYear(now.getFullYear() - 1);
+
+          whereClause.createdAt = {
+            gte: yearStart,
+            lte: now,
+          };
+        }
+
+        if (filterType === "CUSTOM" && startDate && endDate) {
+          whereClause.createdAt = {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          };
+        }
+
+        // =========================================================
+        // 3. GET PAGINATED TRANSACTIONS
+        // =========================================================
+
+        const [data, totalCount] = await Promise.all([
+          prisma.walletTransaction.findMany({
+            where: whereClause,
+
             include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  mobile: true,
+              userWallet: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      mobile: true,
+                    },
+                  },
                 },
               },
-            },
-          },
 
-          rechargePack: true,
+              rechargePack: true,
 
-          payment: true,
+              payment: true,
 
-          session: {
-            select: {
-              id: true,
-            },
-          },
-        },
-
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-          {
-            id: "desc",
-          },
-        ],
-
-        skip,
-        take: limit,
-      }),
-
-      prisma.walletTransaction.count({
-        where: whereClause,
-      }),
-    ]);
-
-    // =========================================================
-    // 4. GET WALLET IDS
-    // =========================================================
-
-    const walletIds = [
-      ...new Set(
-        data
-          .map((transaction) => transaction.userWalletId)
-          .filter(Boolean),
-      ),
-    ];
-
-    // =========================================================
-    // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
-    //
-    // IMPORTANT:
-    // Include updatedBalance from DB
-    // =========================================================
-
-    const allWalletTransactions =
-      walletIds.length > 0
-        ? await prisma.walletTransaction.findMany({
-            where: {
-              userWalletId: {
-                in: walletIds,
+              session: {
+                select: {
+                  id: true,
+                },
               },
-            },
-
-            select: {
-              id: true,
-              userWalletId: true,
-              type: true,
-              coins: true,
-              updatedBalance: true,
-              createdAt: true,
             },
 
             orderBy: [
@@ -2176,174 +2118,210 @@ if (minBalance !== undefined || maxBalance !== undefined) {
                 id: "desc",
               },
             ],
-          })
-        : [];
 
-    // =========================================================
-    // 6. GET CURRENT WALLET BALANCE
-    // =========================================================
+            skip,
+            take: limit,
+          }),
 
-    const wallets = walletIds.length
-      ? await prisma.userWallet.findMany({
-          where: {
-            id: {
-              in: walletIds,
-            },
-          },
+          prisma.walletTransaction.count({
+            where: whereClause,
+          }),
+        ]);
 
-          select: {
-            id: true,
-            balanceCoins: true,
-          },
-        })
-      : [];
+        // =========================================================
+        // 4. GET WALLET IDS
+        // =========================================================
 
-    const currentBalanceMap = new Map();
+        const walletIds = [
+          ...new Set(
+            data.map((transaction) => transaction.userWalletId).filter(Boolean),
+          ),
+        ];
 
-    wallets.forEach((wallet) => {
-      currentBalanceMap.set(
-        wallet.id,
-        Number(wallet.balanceCoins || 0),
-      );
-    });
+        // =========================================================
+        // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
+        //
+        // IMPORTANT:
+        // Include updatedBalance from DB
+        // =========================================================
 
-    // =========================================================
-    // 7. GROUP TRANSACTIONS BY WALLET
-    // =========================================================
+        const allWalletTransactions =
+          walletIds.length > 0
+            ? await prisma.walletTransaction.findMany({
+                where: {
+                  userWalletId: {
+                    in: walletIds,
+                  },
+                },
 
-    const transactionsByWallet = new Map();
+                select: {
+                  id: true,
+                  userWalletId: true,
+                  type: true,
+                  coins: true,
+                  updatedBalance: true,
+                  createdAt: true,
+                },
 
-    allWalletTransactions.forEach((transaction) => {
-      if (!transactionsByWallet.has(transaction.userWalletId)) {
-        transactionsByWallet.set(transaction.userWalletId, []);
-      }
+                orderBy: [
+                  {
+                    createdAt: "desc",
+                  },
+                  {
+                    id: "desc",
+                  },
+                ],
+              })
+            : [];
 
-      transactionsByWallet
-        .get(transaction.userWalletId)
-        .push(transaction);
-    });
+        // =========================================================
+        // 6. GET CURRENT WALLET BALANCE
+        // =========================================================
 
-    // =========================================================
-    // 8. CALCULATE ONLY MISSING HISTORICAL BALANCES
-    // =========================================================
+        const wallets = walletIds.length
+          ? await prisma.userWallet.findMany({
+              where: {
+                id: {
+                  in: walletIds,
+                },
+              },
 
-    const updatedBalanceMap = new Map();
+              select: {
+                id: true,
+                balanceCoins: true,
+              },
+            })
+          : [];
 
-    transactionsByWallet.forEach((transactions, walletId) => {
-      let runningBalance =
-        currentBalanceMap.get(walletId) || 0;
+        const currentBalanceMap = new Map();
 
-      /*
-       * Transactions are DESC:
-       *
-       * latest
-       * ↓
-       * oldest
-       */
+        wallets.forEach((wallet) => {
+          currentBalanceMap.set(wallet.id, Number(wallet.balanceCoins || 0));
+        });
 
-      for (const transaction of transactions) {
-        // -----------------------------------------------------
-        // CASE 1:
-        // Database already has historical balance
-        // -----------------------------------------------------
+        // =========================================================
+        // 7. GROUP TRANSACTIONS BY WALLET
+        // =========================================================
 
-        if (
-          transaction.updatedBalance !== null &&
-          transaction.updatedBalance !== undefined
-        ) {
-          const storedBalance =
-            Number(transaction.updatedBalance);
+        const transactionsByWallet = new Map();
 
-          updatedBalanceMap.set(
-            transaction.id,
-            storedBalance,
-          );
+        allWalletTransactions.forEach((transaction) => {
+          if (!transactionsByWallet.has(transaction.userWalletId)) {
+            transactionsByWallet.set(transaction.userWalletId, []);
+          }
+
+          transactionsByWallet.get(transaction.userWalletId).push(transaction);
+        });
+
+        // =========================================================
+        // 8. CALCULATE ONLY MISSING HISTORICAL BALANCES
+        // =========================================================
+
+        const updatedBalanceMap = new Map();
+
+        transactionsByWallet.forEach((transactions, walletId) => {
+          let runningBalance = currentBalanceMap.get(walletId) || 0;
 
           /*
-           * Very important:
+           * Transactions are DESC:
            *
-           * This becomes our historical anchor.
-           *
-           * Do not continue calculating backwards from
-           * potentially inconsistent legacy data.
+           * latest
+           * ↓
+           * oldest
            */
 
-          runningBalance = storedBalance;
+          for (const transaction of transactions) {
+            // -----------------------------------------------------
+            // CASE 1:
+            // Database already has historical balance
+            // -----------------------------------------------------
 
-          continue;
-        }
+            if (
+              transaction.updatedBalance !== null &&
+              transaction.updatedBalance !== undefined
+            ) {
+              const storedBalance = Number(transaction.updatedBalance);
 
-        // -----------------------------------------------------
-        // CASE 2:
-        // updatedBalance is NULL
-        //
-        // Calculate balance AFTER this transaction
-        // -----------------------------------------------------
+              updatedBalanceMap.set(transaction.id, storedBalance);
 
-        updatedBalanceMap.set(
-          transaction.id,
-          runningBalance,
-        );
+              /*
+               * Very important:
+               *
+               * This becomes our historical anchor.
+               *
+               * Do not continue calculating backwards from
+               * potentially inconsistent legacy data.
+               */
 
-        const coins = Number(transaction.coins || 0);
+              runningBalance = storedBalance;
 
-        const transactionType =
-          String(transaction.type || "").toUpperCase();
+              continue;
+            }
 
-        // CREDIT / REFUND increase wallet
-        if (
-          transactionType === "CREDIT" ||
-          transactionType === "REFUND" ||
-          transactionType === "RECHARGE"
-        ) {
-          runningBalance -= coins;
-        }
+            // -----------------------------------------------------
+            // CASE 2:
+            // updatedBalance is NULL
+            //
+            // Calculate balance AFTER this transaction
+            // -----------------------------------------------------
 
-        // DEBIT decreases wallet
-        else if (
-          transactionType === "DEBIT" ||
-          transactionType === "CHAT" ||
-          transactionType === "CALL" ||
-          transactionType === "SESSION"
-        ) {
-          runningBalance += coins;
-        }
+            updatedBalanceMap.set(transaction.id, runningBalance);
+
+            const coins = Number(transaction.coins || 0);
+
+            const transactionType = String(
+              transaction.type || "",
+            ).toUpperCase();
+
+            // CREDIT / REFUND increase wallet
+            if (
+              transactionType === "CREDIT" ||
+              transactionType === "REFUND" ||
+              transactionType === "RECHARGE"
+            ) {
+              runningBalance -= coins;
+            }
+
+            // DEBIT decreases wallet
+            else if (
+              transactionType === "DEBIT" ||
+              transactionType === "CHAT" ||
+              transactionType === "CALL" ||
+              transactionType === "SESSION"
+            ) {
+              runningBalance += coins;
+            }
+          }
+        });
+
+        // =========================================================
+        // 9. FINAL RESPONSE
+        // =========================================================
+
+        const finalData = data.map((transaction) => ({
+          ...transaction,
+
+          updatedBalance:
+            updatedBalanceMap.get(transaction.id) ??
+            Number(transaction.userWallet?.balanceCoins || 0),
+        }));
+
+        // =========================================================
+        // 10. RETURN
+        // =========================================================
+
+        return {
+          data: finalData,
+          totalCount,
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+        };
+      } catch (err) {
+        console.error("getUserWalletTransactions error:", err);
+
+        throw new Error(err.message || "Failed to fetch transactions");
       }
-    });
-
-    // =========================================================
-    // 9. FINAL RESPONSE
-    // =========================================================
-
-    const finalData = data.map((transaction) => ({
-      ...transaction,
-
-      updatedBalance:
-        updatedBalanceMap.get(transaction.id) ??
-        Number(transaction.userWallet?.balanceCoins || 0),
-    }));
-
-    // =========================================================
-    // 10. RETURN
-    // =========================================================
-
-    return {
-      data: finalData,
-      totalCount,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    };
-  } catch (err) {
-    console.error(
-      "getUserWalletTransactions error:",
-      err,
-    );
-
-    throw new Error(
-      err.message || "Failed to fetch transactions",
-    );
-  }
-},
+    },
     // getAstrologerWalletTransactions: async (
     //   _,
     //   {
@@ -2517,313 +2495,292 @@ if (minBalance !== undefined || maxBalance !== undefined) {
     //   }
     // },
 
-getAstrologerWalletTransactions: async (
-  _,
-  {
-    page = 1,
-    limit = 20,
-    type,
-    amount,
-    contactNo,
-    astrologerId,
-    filterType,
-    startDate,
-    endDate,
-  },
-) => {
-  try {
-    const skip = (page - 1) * limit;
-
-    // --------------------------------
-    // BASE WHERE
-    // --------------------------------
-
-    const whereClause = {
-      astrologerWalletId: {
-        not: null,
+    getAstrologerWalletTransactions: async (
+      _,
+      {
+        page = 1,
+        limit = 20,
+        type,
+        amount,
+        contactNo,
+        astrologerId,
+        filterType,
+        startDate,
+        endDate,
       },
-    };
+    ) => {
+      try {
+        const skip = (page - 1) * limit;
 
-    // --------------------------------
-    // TYPE FILTER
-    // --------------------------------
+        // --------------------------------
+        // BASE WHERE
+        // --------------------------------
 
-    if (type) {
-      whereClause.type = type.toUpperCase();
-    }
-
-    // --------------------------------
-    // AMOUNT FILTER
-    // --------------------------------
-
-    if (
-      amount !== undefined &&
-      amount !== null &&
-      amount !== ""
-    ) {
-      whereClause.amount = Number(amount);
-    }
-
-    // --------------------------------
-    // ASTROLOGER FILTER
-    // --------------------------------
-
-    if (contactNo || astrologerId) {
-      whereClause.astrologerWallet = {
-        astrologer: {},
-      };
-
-      if (contactNo) {
-        whereClause.astrologerWallet.astrologer.contactNo = {
-          contains: contactNo,
+        const whereClause = {
+          astrologerWalletId: {
+            not: null,
+          },
         };
-      }
 
-      if (astrologerId) {
-        whereClause.astrologerWallet.astrologer.id =
-          astrologerId;
-      }
-    }
+        // --------------------------------
+        // TYPE FILTER
+        // --------------------------------
 
-    // --------------------------------
-    // DATE FILTER
-    // --------------------------------
+        if (type) {
+          whereClause.type = type.toUpperCase();
+        }
 
-    const now = new Date();
+        // --------------------------------
+        // AMOUNT FILTER
+        // --------------------------------
 
-    if (filterType === "WEEK") {
-      const weekStart = new Date();
-      weekStart.setDate(now.getDate() - 7);
+        if (amount !== undefined && amount !== null && amount !== "") {
+          whereClause.amount = Number(amount);
+        }
 
-      whereClause.createdAt = {
-        gte: weekStart,
-        lte: now,
-      };
-    }
+        // --------------------------------
+        // ASTROLOGER FILTER
+        // --------------------------------
 
-    if (filterType === "MONTH") {
-      const monthStart = new Date();
-      monthStart.setMonth(now.getMonth() - 1);
+        if (contactNo || astrologerId) {
+          whereClause.astrologerWallet = {
+            astrologer: {},
+          };
 
-      whereClause.createdAt = {
-        gte: monthStart,
-        lte: now,
-      };
-    }
+          if (contactNo) {
+            whereClause.astrologerWallet.astrologer.contactNo = {
+              contains: contactNo,
+            };
+          }
 
-    if (filterType === "YEAR") {
-      const yearStart = new Date();
-      yearStart.setFullYear(now.getFullYear() - 1);
+          if (astrologerId) {
+            whereClause.astrologerWallet.astrologer.id = astrologerId;
+          }
+        }
 
-      whereClause.createdAt = {
-        gte: yearStart,
-        lte: now,
-      };
-    }
+        // --------------------------------
+        // DATE FILTER
+        // --------------------------------
 
-    if (
-      filterType === "CUSTOM" &&
-      startDate &&
-      endDate
-    ) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
+        const now = new Date();
 
-    // --------------------------------
-    // GET TRANSACTIONS
-    // --------------------------------
+        if (filterType === "WEEK") {
+          const weekStart = new Date();
+          weekStart.setDate(now.getDate() - 7);
 
-    const [data, totalCount] = await Promise.all([
-      prisma.walletTransaction.findMany({
-        where: whereClause,
+          whereClause.createdAt = {
+            gte: weekStart,
+            lte: now,
+          };
+        }
 
-        include: {
-          astrologerWallet: {
+        if (filterType === "MONTH") {
+          const monthStart = new Date();
+          monthStart.setMonth(now.getMonth() - 1);
+
+          whereClause.createdAt = {
+            gte: monthStart,
+            lte: now,
+          };
+        }
+
+        if (filterType === "YEAR") {
+          const yearStart = new Date();
+          yearStart.setFullYear(now.getFullYear() - 1);
+
+          whereClause.createdAt = {
+            gte: yearStart,
+            lte: now,
+          };
+        }
+
+        if (filterType === "CUSTOM" && startDate && endDate) {
+          whereClause.createdAt = {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          };
+        }
+
+        // --------------------------------
+        // GET TRANSACTIONS
+        // --------------------------------
+
+        const [data, totalCount] = await Promise.all([
+          prisma.walletTransaction.findMany({
+            where: whereClause,
+
             include: {
-              astrologer: {
+              astrologerWallet: {
+                include: {
+                  astrologer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      displayName: true,
+                      contactNo: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+
+              session: {
                 select: {
                   id: true,
-                  name: true,
-                  displayName: true,
-                  contactNo: true,
-                  email: true,
+                  type: true,
+                  status: true,
+                  coinsEarned: true,
+                  coinsDeducted: true,
+                  commission: true,
+                  durationSec: true,
+                  ratePerMin: true,
+                  startedAt: true,
+                  endedAt: true,
+                  createdAt: true,
+                  roomId: true,
+                },
+              },
+
+              payment: {
+                select: {
+                  id: true,
+                  amount: true,
+                  coins: true,
+                  status: true,
+                  provider: true,
+                  razorpayPaymentId: true,
+                  createdAt: true,
                 },
               },
             },
-          },
 
-          session: {
-            select: {
-              id: true,
-              type: true,
-              status: true,
-              coinsEarned: true,
-              coinsDeducted: true,
-              commission: true,
-              durationSec: true,
-              ratePerMin: true,
-              startedAt: true,
-              endedAt: true,
-              createdAt: true,
-              roomId: true,
-            },
-          },
+            orderBy: [
+              {
+                createdAt: "desc",
+              },
+              {
+                id: "desc",
+              },
+            ],
 
-          payment: {
-            select: {
-              id: true,
-              amount: true,
-              coins: true,
-              status: true,
-              provider: true,
-              razorpayPaymentId: true,
-              createdAt: true,
-            },
-          },
-        },
+            skip,
+            take: limit,
+          }),
 
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-          {
-            id: "desc",
-          },
-        ],
+          prisma.walletTransaction.count({
+            where: whereClause,
+          }),
+        ]);
 
-        skip,
-        take: limit,
-      }),
+        // --------------------------------
+        // CURRENT ASTROLOGER WALLET BALANCE
+        // --------------------------------
+        //
+        // This is the CURRENT balance of the
+        // astrologer's wallet.
+        //
+        // Example:
+        //
+        // Current wallet = 18
+        //
+        // --------------------------------
 
-      prisma.walletTransaction.count({
-        where: whereClause,
-      }),
-    ]);
+        let runningBalance = Number(
+          data[0]?.astrologerWallet?.balanceCoins ?? 0,
+        );
 
-    // --------------------------------
-    // CURRENT ASTROLOGER WALLET BALANCE
-    // --------------------------------
-    //
-    // This is the CURRENT balance of the
-    // astrologer's wallet.
-    //
-    // Example:
-    //
-    // Current wallet = 18
-    //
-    // --------------------------------
+        // --------------------------------
+        // CALCULATE TRANSACTION BALANCE
+        // --------------------------------
+        //
+        // IMPORTANT:
+        //
+        // CREDIT = money/coins added to astrologer wallet
+        //
+        // DEBIT = money/coins deducted from astrologer wallet
+        //
+        // REFUND = money/coins deducted from astrologer wallet
+        //
+        // Since we start from CURRENT balance and
+        // move backwards:
+        //
+        // CREDIT:
+        // Current = Previous + Credit
+        // Previous = Current - Credit
+        //
+        // DEBIT:
+        // Current = Previous - Debit
+        // Previous = Current + Debit
+        //
+        // REFUND:
+        // Current = Previous - Refund
+        // Previous = Current + Refund
+        //
+        // --------------------------------
 
-    let runningBalance = Number(
-      data[0]?.astrologerWallet?.balanceCoins ?? 0
-    );
+        const updatedData = data.map((transaction) => {
+          const transactionCoins = Number(transaction.coins || 0);
 
-    // --------------------------------
-    // CALCULATE TRANSACTION BALANCE
-    // --------------------------------
-    //
-    // IMPORTANT:
-    //
-    // CREDIT = money/coins added to astrologer wallet
-    //
-    // DEBIT = money/coins deducted from astrologer wallet
-    //
-    // REFUND = money/coins deducted from astrologer wallet
-    //
-    // Since we start from CURRENT balance and
-    // move backwards:
-    //
-    // CREDIT:
-    // Current = Previous + Credit
-    // Previous = Current - Credit
-    //
-    // DEBIT:
-    // Current = Previous - Debit
-    // Previous = Current + Debit
-    //
-    // REFUND:
-    // Current = Previous - Refund
-    // Previous = Current + Refund
-    //
-    // --------------------------------
+          // --------------------------------
+          // BALANCE AFTER TRANSACTION
+          // --------------------------------
 
-    const updatedData = data.map((transaction) => {
-      const transactionCoins = Number(
-        transaction.coins || 0
-      );
+          const balanceAfterTransaction = runningBalance;
 
-      // --------------------------------
-      // BALANCE AFTER TRANSACTION
-      // --------------------------------
+          // --------------------------------
+          // CALCULATE PREVIOUS BALANCE
+          // --------------------------------
 
-      const balanceAfterTransaction =
-        runningBalance;
+          switch (transaction.type) {
+            case "CREDIT":
+              // CREDIT increased astrologer's wallet
+              runningBalance -= transactionCoins;
+              break;
 
-      // --------------------------------
-      // CALCULATE PREVIOUS BALANCE
-      // --------------------------------
+            case "DEBIT":
+              // DEBIT decreased astrologer's wallet
+              runningBalance += transactionCoins;
+              break;
 
-      switch (transaction.type) {
-        case "CREDIT":
-          // CREDIT increased astrologer's wallet
-          runningBalance -= transactionCoins;
-          break;
+            case "REFUND":
+              // REFUND also decreased astrologer's wallet
+              runningBalance += transactionCoins;
+              break;
 
-        case "DEBIT":
-          // DEBIT decreased astrologer's wallet
-          runningBalance += transactionCoins;
-          break;
+            default:
+              // Unknown transaction type
+              // Do not modify balance
+              break;
+          }
 
-        case "REFUND":
-          // REFUND also decreased astrologer's wallet
-          runningBalance += transactionCoins;
-          break;
+          return {
+            ...transaction,
 
-        default:
-          // Unknown transaction type
-          // Do not modify balance
-          break;
+            // Balance AFTER this transaction
+            updatedBalance: Number(balanceAfterTransaction.toFixed(2)),
+          };
+        });
+
+        // --------------------------------
+        // PAGINATION
+        // --------------------------------
+
+        const totalPages = Math.ceil(totalCount / limit);
+
+        return {
+          data: updatedData,
+          totalCount,
+          currentPage: page,
+          totalPages,
+        };
+      } catch (err) {
+        console.error("getAstrologerWalletTransactions error:", err);
+
+        throw new Error(
+          err.message || "Failed to fetch astrologer wallet transactions",
+        );
       }
-
-      return {
-        ...transaction,
-
-        // Balance AFTER this transaction
-        updatedBalance: Number(
-          balanceAfterTransaction.toFixed(2)
-        ),
-      };
-    });
-
-    // --------------------------------
-    // PAGINATION
-    // --------------------------------
-
-    const totalPages = Math.ceil(
-      totalCount / limit
-    );
-
-    return {
-      data: updatedData,
-      totalCount,
-      currentPage: page,
-      totalPages,
-    };
-  } catch (err) {
-    console.error(
-      "getAstrologerWalletTransactions error:",
-      err
-    );
-
-    throw new Error(
-      err.message ||
-        "Failed to fetch astrologer wallet transactions"
-    );
-  }
-},
-
+    },
 
     getAllWalletTransactions: async (
       _,
@@ -3675,23 +3632,16 @@ getAstrologerWalletTransactions: async (
         throw new Error("Failed to fetch payment reports");
       }
     },
-    getModulesPaginated: async (_, { page = 1, limit = 10 }) => {
-      const skip = (page - 1) * limit;
-
-      const [modules, totalCount] = await Promise.all([
-        prisma.module.findMany({
-          skip,
-          take: limit,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.module.count(),
-      ]);
+    getModulesPaginated: async () => {
+      const modules = await prisma.module.findMany({
+        orderBy: { createdAt: "desc" },
+      });
 
       return {
         data: modules,
-        totalCount,
-        currentPage: page,
-        totalPages: Math.ceil(totalCount / limit),
+        totalCount: modules.length,
+        currentPage: 1,
+        totalPages: 1,
       };
     },
 
@@ -4656,70 +4606,70 @@ getAstrologerWalletTransactions: async (
       }
     },
 
-getDashboardCounts: async (_, __, { prisma }) => {
-  try {
-    const [
-      totalAstrologers,
-      totalUsers,
-      totalStaff,
-      totalCalls,
-      totalChats,
-      totalApplications,
-      revenueResult,
-      rechargeResult,
-    ] = await Promise.all([
-      prisma.astrologer.count(),
+    getDashboardCounts: async (_, __, { prisma }) => {
+      try {
+        const [
+          totalAstrologers,
+          totalUsers,
+          totalStaff,
+          totalCalls,
+          totalChats,
+          totalApplications,
+          revenueResult,
+          rechargeResult,
+        ] = await Promise.all([
+          prisma.astrologer.count(),
 
-      prisma.user.count(),
+          prisma.user.count(),
 
-      prisma.staff.count(),
+          prisma.staff.count(),
 
-      prisma.session.count({
-        where: {
-          type: "CALL",
-        },
-      }),
+          prisma.session.count({
+            where: {
+              type: "CALL",
+            },
+          }),
 
-      prisma.session.count({
-        where: {
-          type: "CHAT",
-        },
-      }),
+          prisma.session.count({
+            where: {
+              type: "CHAT",
+            },
+          }),
 
-      prisma.astrologerApplication.count(),
+          prisma.astrologerApplication.count(),
 
-      prisma.session.aggregate({
-        _sum: {
-          coinsDeducted: true,
-        },
-      }),
+          prisma.session.aggregate({
+            _sum: {
+              coinsDeducted: true,
+            },
+          }),
 
-      prisma.payment.aggregate({
-        where: {
-          status: "SUCCESS",
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-    ]);
+          prisma.payment.aggregate({
+            where: {
+              status: "SUCCESS",
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+        ]);
 
-    return {
-      totalAstrologers,
-      totalUsers,
-      totalStaff,
-      totalCalls,
-      totalChats,
-      totalApplications,
-      totalRechargeAmount: rechargeResult?._sum?.amount ?? 0,
-      totalRevenue: revenueResult?._sum?.coinsDeducted ?? 0,
-    };
-  } catch (error) {
-    console.error("getDashboardCounts ERROR:", error);
+        return {
+          totalAstrologers,
+          totalUsers,
+          totalStaff,
+          totalCalls,
+          totalChats,
+          totalApplications,
+          totalRechargeAmount: rechargeResult?._sum?.amount ?? 0,
+          totalRevenue: revenueResult?._sum?.coinsDeducted ?? 0,
+        };
+      } catch (error) {
+        console.error("getDashboardCounts ERROR:", error);
 
-    throw new Error(error?.message || "Failed to fetch dashboard counts");
-  }
-},
+        throw new Error(error?.message || "Failed to fetch dashboard counts");
+      }
+    },
 
     getUserProfile: async (_, { userId }, { prisma }) => {
       try {
@@ -5450,24 +5400,22 @@ getDashboardCounts: async (_, __, { prisma }) => {
           throw new Error("Session not found");
         }
 
+        const sessionDurationSec = Number(session.durationSec || 0);
 
-    const sessionDurationSec = Number(session.durationSec || 0);
+        if (sessionDurationSec < 30) {
+          throw new Error("Session does not have enough duration for refund");
+        }
 
-if (sessionDurationSec < 30) {
-  throw new Error("Session does not have enough duration for refund");
-}
+        const maxRefundMinutes = Math.max(
+          1,
+          Math.ceil((sessionDurationSec - 30) / 60),
+        );
 
-const maxRefundMinutes = Math.max(
-  1,
-  Math.ceil((sessionDurationSec - 30) / 60),
-);
-
-if (duration > maxRefundMinutes) {
-  throw new Error(
-    `Refund duration cannot exceed ${maxRefundMinutes} minutes`,
-  );
-}
-
+        if (duration > maxRefundMinutes) {
+          throw new Error(
+            `Refund duration cannot exceed ${maxRefundMinutes} minutes`,
+          );
+        }
 
         const existingRequest = await prisma.refundRequest.findFirst({
           where: {
@@ -5544,8 +5492,8 @@ if (duration > maxRefundMinutes) {
             // directly, so leave these null
             transactionId: null,
             orderId: null,
-          
-sessionDate: session.createdAt,
+
+            sessionDate: session.createdAt,
             sessionDuration: sessionDurationSec,
 
             ratePerMin,
@@ -5576,349 +5524,340 @@ sessionDate: session.createdAt,
       }
     },
 
-  approveRefundRequest: async (_, { id }, context) => {
-  try {
-    const { prisma, user } = context;
+    approveRefundRequest: async (_, { id }, context) => {
+      try {
+        const { prisma, user } = context;
 
-    // -----------------------------
-    // AUTH
-    // -----------------------------
+        // -----------------------------
+        // AUTH
+        // -----------------------------
 
-    if (!user?.id) {
-      throw new Error("Unauthorized");
-    }
+        if (!user?.id) {
+          throw new Error("Unauthorized");
+        }
 
-    // -----------------------------
-    // STAFF
-    // -----------------------------
+        // -----------------------------
+        // STAFF
+        // -----------------------------
 
-    const staff = await prisma.staff.findUnique({
-      where: {
-        id: user.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        isActive: true,
-        isDeleted: true,
-      },
-    });
-
-    if (!staff || !staff.isActive || staff.isDeleted) {
-      throw new Error("Staff account is not active");
-    }
-
-    // -----------------------------
-    // REFUND REQUEST
-    // -----------------------------
-
-    const request = await prisma.refundRequest.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    if (!request) {
-      throw new Error("Refund request not found");
-    }
-
-    // -----------------------------
-    // STATUS CHECK
-    // -----------------------------
-
-    if (request.status !== "PENDING") {
-      throw new Error(
-        `Refund request is already ${request.status.toLowerCase()}`
-      );
-    }
-
-    // -----------------------------
-    // VALIDATE REFUND
-    // -----------------------------
-
-    const refundCoins = Number(request.refundAmount);
-
-    if (!Number.isFinite(refundCoins) || refundCoins <= 0) {
-      throw new Error("Invalid refund amount");
-    }
-
-    // -----------------------------
-    // ATOMIC TRANSACTION
-    // -----------------------------
-
-    const result = await prisma.$transaction(async (tx) => {
-      // --------------------------------
-      // Re-check request
-      // --------------------------------
-
-      const currentRequest = await tx.refundRequest.findUnique({
-        where: {
-          id,
-        },
-      });
-
-      if (!currentRequest) {
-        throw new Error("Refund request not found");
-      }
-
-      if (currentRequest.status !== "PENDING") {
-        throw new Error("Refund request has already been processed");
-      }
-
-      // --------------------------------
-      // GET SESSION
-      // --------------------------------
-
-      const session = await tx.session.findUnique({
-        where: {
-          id: currentRequest.sessionId,
-        },
-        select: {
-          id: true,
-          astrologerId: true,
-          type: true,
-        },
-      });
-
-      if (!session) {
-        throw new Error("Session not found");
-      }
-
-      if (!session.astrologerId) {
-        throw new Error("Astrologer not found for this session");
-      }
-
-      // --------------------------------
-      // USER WALLET
-      // --------------------------------
-
-      const userWallet = await tx.userWallet.findUnique({
-        where: {
-          userId: currentRequest.userId,
-        },
-      });
-
-      if (!userWallet) {
-        throw new Error("User wallet not found");
-      }
-
-      // --------------------------------
-      // ASTROLOGER WALLET
-      // --------------------------------
-
-      const astrologerWallet = await tx.astrologerWallet.findUnique({
-        where: {
-          astrologerId: session.astrologerId,
-        },
-      });
-
-      if (!astrologerWallet) {
-        throw new Error("Astrologer wallet not found");
-      }
-
-      // --------------------------------
-      // GET ASTROLOGER PRICING
-      // --------------------------------
-
-      const pricing = await tx.astrologerPricing.findUnique({
-        where: {
-          astrologerId_type: {
-            astrologerId: session.astrologerId,
-            type: session.type,
-          },
-        },
-        select: {
-          id: true,
-          type: true,
-          price: true,
-          offerPrice: true,
-          commissionPercent: true,
-          isActive: true,
-        },
-      });
-
-      if (!pricing) {
-        throw new Error(
-          `Astrologer pricing not found for ${session.type}`
-        );
-      }
-
-      if (!pricing.isActive) {
-        throw new Error(
-          `Astrologer pricing for ${session.type} is inactive`
-        );
-      }
-
-      // --------------------------------
-      // COMMISSION %
-      // --------------------------------
-
-      const commissionPercent = Number(pricing.commissionPercent ?? 45);
-
-      if (
-        !Number.isFinite(commissionPercent) ||
-        commissionPercent < 0 ||
-        commissionPercent > 100
-      ) {
-        throw new Error(
-          `Invalid commission percentage: ${commissionPercent}`
-        );
-      }
-
-      // --------------------------------
-      // CALCULATE ASTROLOGER REFUND
-      // --------------------------------
-      //
-      // Example:
-      //
-      // refundCoins       = 100
-      // commissionPercent = 70%
-      //
-      // astrologerRefund = 100 * 70 / 100
-      //                   = 70 coins
-      //
-      // --------------------------------
-
-      const astrologerRefundCoins = Number(
-        ((refundCoins * commissionPercent) / 100).toFixed(2)
-      );
-
-      if (astrologerRefundCoins <= 0) {
-        throw new Error(
-          "Calculated astrologer refund amount is zero"
-        );
-      }
-
-      // --------------------------------
-      // CHECK ASTROLOGER BALANCE
-      // --------------------------------
-
-      if (
-        Number(astrologerWallet.balanceCoins) <
-        astrologerRefundCoins
-      ) {
-        throw new Error(
-          `Insufficient astrologer wallet balance. Available: ${astrologerWallet.balanceCoins}, Required: ${astrologerRefundCoins}`
-        );
-      }
-
-      // --------------------------------
-      // CREDIT USER WALLET
-      // --------------------------------
-
-      const updatedUserWallet = await tx.userWallet.update({
-        where: {
-          id: userWallet.id,
-        },
-        data: {
-          balanceCoins: {
-            increment: refundCoins,
-          },
-        },
-      });
-
-      // --------------------------------
-      // DEBIT ASTROLOGER WALLET
-      // --------------------------------
-      const updatedAstrologerWallet =
-        await tx.astrologerWallet.update({
+        const staff = await prisma.staff.findUnique({
           where: {
-            id: astrologerWallet.id,
+            id: user.id,
           },
-          data: {
-            balanceCoins: {
-              decrement: astrologerRefundCoins,
-            },
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+            isDeleted: true,
           },
         });
 
-      // --------------------------------
-      // USER WALLET TRANSACTION
-      // --------------------------------
+        if (!staff || !staff.isActive || staff.isDeleted) {
+          throw new Error("Staff account is not active");
+        }
 
-      await tx.walletTransaction.create({
-        data: {
-          userWalletId: userWallet.id,
+        // -----------------------------
+        // REFUND REQUEST
+        // -----------------------------
 
-          sessionId: currentRequest.sessionId,
+        const request = await prisma.refundRequest.findUnique({
+          where: {
+            id,
+          },
+        });
 
-          type: "REFUND",
+        if (!request) {
+          throw new Error("Refund request not found");
+        }
 
-          coins: refundCoins,
+        // -----------------------------
+        // STATUS CHECK
+        // -----------------------------
 
-          amount: Number(currentRequest.refundAmount),
+        if (request.status !== "PENDING") {
+          throw new Error(
+            `Refund request is already ${request.status.toLowerCase()}`,
+          );
+        }
 
-          description:
-            `Refund approved - ${currentRequest.refundDuration} min`,
-        },
-      });
+        // -----------------------------
+        // VALIDATE REFUND
+        // -----------------------------
 
-      // --------------------------------
-      // ASTROLOGER WALLET TRANSACTION
-      // --------------------------------
+        const refundCoins = Number(request.refundAmount);
 
-      await tx.walletTransaction.create({
-        data: {
-          astrologerWalletId: astrologerWallet.id,
+        if (!Number.isFinite(refundCoins) || refundCoins <= 0) {
+          throw new Error("Invalid refund amount");
+        }
 
-          sessionId: currentRequest.sessionId,
+        // -----------------------------
+        // ATOMIC TRANSACTION
+        // -----------------------------
 
-          type: "REFUND",
+        const result = await prisma.$transaction(async (tx) => {
+          // --------------------------------
+          // Re-check request
+          // --------------------------------
 
-          coins: astrologerRefundCoins,
+          const currentRequest = await tx.refundRequest.findUnique({
+            where: {
+              id,
+            },
+          });
 
-          amount: astrologerRefundCoins,
+          if (!currentRequest) {
+            throw new Error("Refund request not found");
+          }
 
-          description:
-            `Refund deducted - ${currentRequest.refundDuration} min ` +
-            `(${session.type}`,
-        },
-      });
+          if (currentRequest.status !== "PENDING") {
+            throw new Error("Refund request has already been processed");
+          }
 
-      // --------------------------------
-      // UPDATE REFUND REQUEST
-      // --------------------------------
+          // --------------------------------
+          // GET SESSION
+          // --------------------------------
 
-      const updatedRequest = await tx.refundRequest.update({
-        where: {
-          id,
-        },
-        data: {
-          status: "APPROVED",
+          const session = await tx.session.findUnique({
+            where: {
+              id: currentRequest.sessionId,
+            },
+            select: {
+              id: true,
+              astrologerId: true,
+              type: true,
+            },
+          });
 
-          approvedByStaffId: staff.id,
+          if (!session) {
+            throw new Error("Session not found");
+          }
 
-          approvedByStaffName: staff.name,
+          if (!session.astrologerId) {
+            throw new Error("Astrologer not found for this session");
+          }
 
-          approvedAt: new Date(),
-        },
-      });
+          // --------------------------------
+          // USER WALLET
+          // --------------------------------
 
-      return {
-        updatedUserWallet,
-        updatedAstrologerWallet,
-        updatedRequest,
-        refundCoins,
-        astrologerRefundCoins,
-        commissionPercent,
-      };
-    });
+          const userWallet = await tx.userWallet.findUnique({
+            where: {
+              userId: currentRequest.userId,
+            },
+          });
 
-    console.log("Refund approved:", {
-      refundRequestId: id,
-      sessionId: result.updatedRequest.sessionId,
-      refundCoins: result.refundCoins,
-      astrologerRefundCoins: result.astrologerRefundCoins,
-      commissionPercent: result.commissionPercent,
-    });
+          if (!userWallet) {
+            throw new Error("User wallet not found");
+          }
 
-    return result.updatedRequest;
-  } catch (error) {
-    console.error("approveRefundRequest error:", error);
+          // --------------------------------
+          // ASTROLOGER WALLET
+          // --------------------------------
 
-    throw new Error(error.message || "Failed to approve refund");
-  }
-},
+          const astrologerWallet = await tx.astrologerWallet.findUnique({
+            where: {
+              astrologerId: session.astrologerId,
+            },
+          });
+
+          if (!astrologerWallet) {
+            throw new Error("Astrologer wallet not found");
+          }
+
+          // --------------------------------
+          // GET ASTROLOGER PRICING
+          // --------------------------------
+
+          const pricing = await tx.astrologerPricing.findUnique({
+            where: {
+              astrologerId_type: {
+                astrologerId: session.astrologerId,
+                type: session.type,
+              },
+            },
+            select: {
+              id: true,
+              type: true,
+              price: true,
+              offerPrice: true,
+              commissionPercent: true,
+              isActive: true,
+            },
+          });
+
+          if (!pricing) {
+            throw new Error(`Astrologer pricing not found for ${session.type}`);
+          }
+
+          if (!pricing.isActive) {
+            throw new Error(
+              `Astrologer pricing for ${session.type} is inactive`,
+            );
+          }
+
+          // --------------------------------
+          // COMMISSION %
+          // --------------------------------
+
+          const commissionPercent = Number(pricing.commissionPercent ?? 45);
+
+          if (
+            !Number.isFinite(commissionPercent) ||
+            commissionPercent < 0 ||
+            commissionPercent > 100
+          ) {
+            throw new Error(
+              `Invalid commission percentage: ${commissionPercent}`,
+            );
+          }
+
+          // --------------------------------
+          // CALCULATE ASTROLOGER REFUND
+          // --------------------------------
+          //
+          // Example:
+          //
+          // refundCoins       = 100
+          // commissionPercent = 70%
+          //
+          // astrologerRefund = 100 * 70 / 100
+          //                   = 70 coins
+          //
+          // --------------------------------
+
+          const astrologerRefundCoins = Number(
+            ((refundCoins * commissionPercent) / 100).toFixed(2),
+          );
+
+          if (astrologerRefundCoins <= 0) {
+            throw new Error("Calculated astrologer refund amount is zero");
+          }
+
+          // --------------------------------
+          // CHECK ASTROLOGER BALANCE
+          // --------------------------------
+
+          if (Number(astrologerWallet.balanceCoins) < astrologerRefundCoins) {
+            throw new Error(
+              `Insufficient astrologer wallet balance. Available: ${astrologerWallet.balanceCoins}, Required: ${astrologerRefundCoins}`,
+            );
+          }
+
+          // --------------------------------
+          // CREDIT USER WALLET
+          // --------------------------------
+
+          const updatedUserWallet = await tx.userWallet.update({
+            where: {
+              id: userWallet.id,
+            },
+            data: {
+              balanceCoins: {
+                increment: refundCoins,
+              },
+            },
+          });
+
+          // --------------------------------
+          // DEBIT ASTROLOGER WALLET
+          // --------------------------------
+          const updatedAstrologerWallet = await tx.astrologerWallet.update({
+            where: {
+              id: astrologerWallet.id,
+            },
+            data: {
+              balanceCoins: {
+                decrement: astrologerRefundCoins,
+              },
+            },
+          });
+
+          // --------------------------------
+          // USER WALLET TRANSACTION
+          // --------------------------------
+
+          await tx.walletTransaction.create({
+            data: {
+              userWalletId: userWallet.id,
+
+              sessionId: currentRequest.sessionId,
+
+              type: "REFUND",
+
+              coins: refundCoins,
+
+              amount: Number(currentRequest.refundAmount),
+
+              description: `Refund approved - ${currentRequest.refundDuration} min`,
+            },
+          });
+
+          // --------------------------------
+          // ASTROLOGER WALLET TRANSACTION
+          // --------------------------------
+
+          await tx.walletTransaction.create({
+            data: {
+              astrologerWalletId: astrologerWallet.id,
+
+              sessionId: currentRequest.sessionId,
+
+              type: "REFUND",
+
+              coins: astrologerRefundCoins,
+
+              amount: astrologerRefundCoins,
+
+              description:
+                `Refund deducted - ${currentRequest.refundDuration} min ` +
+                `(${session.type}`,
+            },
+          });
+
+          // --------------------------------
+          // UPDATE REFUND REQUEST
+          // --------------------------------
+
+          const updatedRequest = await tx.refundRequest.update({
+            where: {
+              id,
+            },
+            data: {
+              status: "APPROVED",
+
+              approvedByStaffId: staff.id,
+
+              approvedByStaffName: staff.name,
+
+              approvedAt: new Date(),
+            },
+          });
+
+          return {
+            updatedUserWallet,
+            updatedAstrologerWallet,
+            updatedRequest,
+            refundCoins,
+            astrologerRefundCoins,
+            commissionPercent,
+          };
+        });
+
+        console.log("Refund approved:", {
+          refundRequestId: id,
+          sessionId: result.updatedRequest.sessionId,
+          refundCoins: result.refundCoins,
+          astrologerRefundCoins: result.astrologerRefundCoins,
+          commissionPercent: result.commissionPercent,
+        });
+
+        return result.updatedRequest;
+      } catch (error) {
+        console.error("approveRefundRequest error:", error);
+
+        throw new Error(error.message || "Failed to approve refund");
+      }
+    },
 
     rejectRefundRequest: async (_, { id, reason }, context) => {
       try {
@@ -6616,7 +6555,7 @@ sessionDate: session.createdAt,
 
     // ================= ADMIN LOGIN =================
     loginStaff: async (_, { email, password }, { res }) => {
-      console.log("loginStaff-------------:",email,password);
+      console.log("loginStaff-------------:", email, password);
       const staff = await prisma.staff.findUnique({
         where: { email },
         include: { role: true },
@@ -7691,11 +7630,12 @@ sessionDate: session.createdAt,
     },
 
     // Permission
-    createPermission: async (_, { name, moduleIds }, context) => {
+    createPermission: async (_, { name, moduleIds, type }, context) => {
       const { prisma } = context;
+
       await checkPermission(context, "permissions.create");
 
-      if (name.includes(".")) {
+      if (type === "SYSTEM") {
         throw new Error("System permissions cannot be created manually");
       }
 
@@ -9259,15 +9199,18 @@ sessionDate: session.createdAt,
 
       return true;
     },
-    updateUserStatus: async (_, { userId, isActive, isDeleted}, { prisma }) => {
+    updateUserStatus: async (
+      _,
+      { userId, isActive, isDeleted },
+      { prisma },
+    ) => {
       return prisma.user.update({
         where: {
           id: userId,
         },
         data: {
           isActive,
-          isDeleted
-          
+          isDeleted,
         },
       });
     },
