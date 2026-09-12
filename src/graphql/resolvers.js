@@ -4282,7 +4282,7 @@ export const resolvers = {
     getAstrologerById: async (_, { id }, context) => {
       const { prisma } = context;
 
-      await checkPermission(context, "astrologer.read");
+      await checkPermission(context, "astroprofile.view");
 
       const astrologer = await prisma.astrologer.findUnique({
         where: { id },
@@ -4328,7 +4328,7 @@ export const resolvers = {
       try {
         const { prisma } = context;
 
-        await checkPermission(context, "gift-history.read");
+        // await checkPermission(context, "gift-history.read");
 
         const skip = (page - 1) * limit;
 
