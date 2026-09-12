@@ -2901,6 +2901,7 @@ sessionDate: DateTime!
     id: ID!
     reason: String!
   ): RefundRequest!
+  restoreAstrologer(astrologerId: ID!): Boolean
   }
 `;
 
