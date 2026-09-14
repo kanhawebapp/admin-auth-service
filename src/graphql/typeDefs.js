@@ -1980,6 +1980,7 @@ type Session {
     userId: ID!
 roomId: String
     userName: String
+    astroName: String
     by: String
     ratePerMin: Int
     durationSec: Int
