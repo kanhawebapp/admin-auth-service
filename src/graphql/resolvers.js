@@ -1262,256 +1262,250 @@ export const resolvers = {
 
     // -------------------- RESOLVER --------------------
 
-    getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
-      try {
-        const {
-          query,
-          mobile,
-          astrologerName,
-          userId,
-          status,
-          filterType,
-          startDate,
-          endDate,
-          page = 1,
-          limit = 10,
-        } = searchInput;
+getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
+  try {
+    const {
+      query,
+      sessionId,
+      astrologerName,
+      userId,
+      status,
+      filterType,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10,
+    } = searchInput;
 
-        const safePage = Math.max(page, 1);
-        const safeLimit = Math.min(limit, 100);
+    const safePage = Math.max(page, 1);
+    const safeLimit = Math.min(limit, 100);
 
-        const skip = (safePage - 1) * safeLimit;
+    const skip = (safePage - 1) * safeLimit;
 
-        // ---------------- WHERE CONDITION ----------------
+    // ---------------- WHERE CONDITION ----------------
 
-        const where = {
-          type: "CHAT", // ONLY CHAT DATA
-        };
-        if (userId) {
-          where.userId = userId;
-        }
+    const where = {
+      type: "CHAT",
+    };
 
-        // ---------------- USER SEARCH FILTER ----------------
+    if (userId) {
+      where.userId = userId;
+    }
 
-        const userFilters = [];
+    // ---------------- SEARCH FILTER ----------------
 
-        if (query) {
-          userFilters.push(
-            {
-              name: {
-                contains: query,
-                mode: "insensitive",
-              },
-            },
-            {
-              mobile: {
-                contains: query,
-              },
-            },
-          );
-        }
+    const searchFilters = [];
 
-        if (mobile) {
-          userFilters.push({
-            mobile: {
-              contains: mobile,
-            },
-          });
-        }
-
-        if (userFilters.length > 0) {
-          where.user = {
-            OR: userFilters,
-          };
-        }
-
-        // ---------------- ASTROLOGER FILTER ----------------
-
-        if (astrologerName) {
-          where.astrologer = {
+    if (query) {
+      searchFilters.push(
+        {
+          id: {
+            contains: query,
+            mode: "insensitive",
+          },
+        },
+        {
+          user: {
             name: {
-              contains: astrologerName,
+              contains: query,
               mode: "insensitive",
             },
-          };
+          },
         }
+      );
+    }
 
-        // ---------------- STATUS FILTER ----------------
+    if (sessionId) {
+      where.id = sessionId;
+    }
 
-        if (status) {
-          where.status = status;
-        }
+    if (searchFilters.length > 0) {
+      where.OR = searchFilters;
+    }
 
-        // ---------------- DATE FILTER ----------------
+    // ---------------- ASTROLOGER FILTER ----------------
 
-        let start;
-        let end;
+    if (astrologerName) {
+      where.astrologer = {
+        name: {
+          contains: astrologerName,
+          mode: "insensitive",
+        },
+      };
+    }
 
-        if (filterType) {
-          switch (filterType) {
-            case "TODAY":
-              start = new Date();
-              start.setHours(0, 0, 0, 0);
+    // ---------------- STATUS FILTER ----------------
 
-              end = new Date();
-              break;
+    if (status) {
+      where.status = status;
+    }
 
-            case "WEEK":
-              start = new Date();
-              start.setDate(start.getDate() - 7);
+    // ---------------- DATE FILTER ----------------
 
-              end = new Date();
-              break;
+    let start;
+    let end;
 
-            case "MONTH":
-              start = new Date();
-              start.setMonth(start.getMonth() - 1);
+    if (filterType) {
+      switch (filterType) {
+        case "TODAY":
+          start = new Date();
+          start.setHours(0, 0, 0, 0);
 
-              end = new Date();
-              break;
+          end = new Date();
+          break;
 
-            case "YEAR":
-              start = new Date();
-              start.setFullYear(start.getFullYear() - 1);
+        case "WEEK":
+          start = new Date();
+          start.setDate(start.getDate() - 7);
 
-              end = new Date();
-              break;
+          end = new Date();
+          break;
 
-            case "CUSTOM":
-              start = startDate
-                ? new Date(`${startDate}T00:00:00+05:30`)
-                : undefined;
+        case "MONTH":
+          start = new Date();
+          start.setMonth(start.getMonth() - 1);
 
-              end = endDate ? new Date(`${endDate}T00:00:00+05:30`) : undefined;
+          end = new Date();
+          break;
 
-              // Include the complete end date
-              if (end) {
-                end.setDate(end.getDate() + 1);
-              }
+        case "YEAR":
+          start = new Date();
+          start.setFullYear(start.getFullYear() - 1);
 
-              break;
-          }
-        }
+          end = new Date();
+          break;
 
-        if (start || end) {
-          where.createdAt = {};
+        case "CUSTOM":
+          start = startDate
+            ? new Date(`${startDate}T00:00:00+05:30`)
+            : undefined;
 
-          if (start) {
-            where.createdAt.gte = start;
-          }
+          end = endDate
+            ? new Date(`${endDate}T00:00:00+05:30`)
+            : undefined;
 
           if (end) {
-            where.createdAt.lt = end;
+            end.setDate(end.getDate() + 1);
           }
-        }
 
-        // ---------------- FETCH DATA ----------------
-
-        const [sessions, totalCount, aggregate] = await Promise.all([
-          prisma.session.findMany({
-            where,
-
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  mobile: true,
-                  countryCode: true,
-                },
-              },
-
-              astrologer: {
-                select: {
-                  id: true,
-                  name: true,
-                  displayName: true,
-                },
-              },
-
-              remedies: {
-                select: {
-                  id: true,
-                },
-                take: 1,
-              },
-            },
-
-            orderBy: {
-              createdAt: "desc",
-            },
-
-            skip,
-            take: safeLimit,
-          }),
-
-          prisma.session.count({
-            where,
-          }),
-
-          prisma.session.aggregate({
-            where,
-
-            _sum: {
-              coinsDeducted: true,
-              coinsEarned: true,
-              commission: true,
-            },
-          }),
-        ]);
-
-        // ---------------- FORMAT RESPONSE ----------------
-
-        const formattedData = sessions.map((session) => ({
-          sessionId: session.id,
-          userId: session.userId,
-          source: session.source,
-          userId: session.user?.id || null,
-          userName: session.user?.name || "",
-          mobile: session.user?.mobile || "",
-          by: session.by,
-          astrologerId: session.astrologer?.id || null,
-          astrologerName:
-            session.astrologer?.displayName || session.astrologer?.name || "",
-
-          type: session.type,
-          status: session.status,
-
-          ratePerMin: session.ratePerMin || 0,
-
-          durationSec: session.durationSec || 0,
-
-          coinsDeducted: session.coinsDeducted || 0,
-
-          coinsEarned: session.coinsEarned || 0,
-
-          commission: session.commission || 0,
-
-          startedAt: session.startedAt,
-          endedAt: session.endedAt,
-          hasRemedy: session.remedies.length > 0,
-          createdAt: session.createdAt,
-        }));
-
-        return {
-          data: formattedData,
-
-          totalCount,
-
-          currentPage: safePage,
-
-          totalPages: Math.ceil(totalCount / safeLimit),
-
-          totalCoinsDeducted: aggregate?._sum?.coinsDeducted || 0,
-
-          totalCoinsEarned: aggregate?._sum?.coinsEarned || 0,
-
-          totalCommission: aggregate?._sum?.commission || 0,
-        };
-      } catch (error) {
-        throw new Error("Failed to fetch users chat history");
+          break;
       }
-    },
+    }
+
+    if (start || end) {
+      where.createdAt = {};
+
+      if (start) {
+        where.createdAt.gte = start;
+      }
+
+      if (end) {
+        where.createdAt.lt = end;
+      }
+    }
+
+    // ---------------- FETCH DATA ----------------
+
+    const [sessions, totalCount, aggregate] = await Promise.all([
+      prisma.session.findMany({
+        where,
+
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              mobile: true,
+              countryCode: true,
+            },
+          },
+
+          astrologer: {
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+            },
+          },
+
+          remedies: {
+            select: {
+              id: true,
+            },
+            take: 1,
+          },
+        },
+
+        orderBy: {
+          createdAt: "desc",
+        },
+
+        skip,
+        take: safeLimit,
+      }),
+
+      prisma.session.count({
+        where,
+      }),
+
+      prisma.session.aggregate({
+        where,
+
+        _sum: {
+          coinsDeducted: true,
+          coinsEarned: true,
+          commission: true,
+        },
+      }),
+    ]);
+
+    // ---------------- FORMAT RESPONSE ----------------
+
+    const formattedData = sessions.map((session) => ({
+      sessionId: session.id,
+      userId: session.userId,
+      source: session.source,
+      userName: session.user?.name || "",
+      mobile: session.user?.mobile || "",
+      by: session.by,
+
+      astrologerId: session.astrologer?.id || null,
+      astrologerName:
+        session.astrologer?.displayName ||
+        session.astrologer?.name ||
+        "",
+
+      type: session.type,
+      status: session.status,
+
+      ratePerMin: session.ratePerMin || 0,
+      durationSec: session.durationSec || 0,
+
+      coinsDeducted: session.coinsDeducted || 0,
+      coinsEarned: session.coinsEarned || 0,
+      commission: session.commission || 0,
+
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+
+      hasRemedy: session.remedies.length > 0,
+      createdAt: session.createdAt,
+    }));
+
+    return {
+      data: formattedData,
+      totalCount,
+      currentPage: safePage,
+      totalPages: Math.ceil(totalCount / safeLimit),
+
+      totalCoinsDeducted: aggregate?._sum?.coinsDeducted || 0,
+      totalCoinsEarned: aggregate?._sum?.coinsEarned || 0,
+      totalCommission: aggregate?._sum?.commission || 0,
+    };
+  } catch (error) {
+    throw new Error("Failed to fetch users chat history");
+  }
+},
     getCallRecording: async (_, { sessionId }, { prisma }) => {
       return prisma.callRecording.findFirst({
         where: {

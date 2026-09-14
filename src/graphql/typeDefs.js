@@ -1046,7 +1046,7 @@ updatedBalance: Float
 
   input UserChatHistorySearchInput {
     query: String
-    mobile: String
+    sessionId: String
     astrologerName: String
 
     userId: ID
