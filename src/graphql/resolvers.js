@@ -1176,6 +1176,7 @@ export const resolvers = {
           roomId: session.roomId,
           userName: session.user?.name || null,
           type: session.type,
+          astroName: session.astrologer?.displayName || null,
           by: session.by,
           astrologerId: session.astrologerId,
           ratePerMin: session.ratePerMin,
