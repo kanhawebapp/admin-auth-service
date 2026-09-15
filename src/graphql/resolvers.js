@@ -2311,7 +2311,7 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
           totalPages: Math.ceil(totalCount / limit),
         };
       } catch (err) {
-        console.error("getUserWalletTransactions error:", err);
+        console.error("getUserWalletTransactionss error:", err);
 
         throw new Error(err.message || "Failed to fetch transactions");
       }
