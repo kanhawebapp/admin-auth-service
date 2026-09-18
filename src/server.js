@@ -34,7 +34,8 @@ async function startServer() {
     origin: [
       "http://localhost:7002",
       "https://admin-panel-v2-hazel.vercel.app",
-      "https://admin-vercel-nine.vercel.app/",
+      "https://admin-vercel-nine.vercel.app",
+      
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
