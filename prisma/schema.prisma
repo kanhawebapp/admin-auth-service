@@ -679,6 +679,7 @@ model RechargePack {
   @@index([createdAt])
 }
 
+
 model UserWallet {
   id     String @id @default(uuid())
   userId String @unique
