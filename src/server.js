@@ -29,23 +29,17 @@ async function startServer() {
 
 
 
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
+    : [];
+
   app.use(
-  cors({
-    origin: [
-      "http://localhost:7002",
-      "https://admin-panel-v2-hazel.vercel.app",
-      "https://admin-vercel-nine.vercel.app",
-      
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "apollo-require-preflight",
-    ],
-  })
-);
+    cors({
+      origin: corsOrigins,
+      credentials: true,
+    }),
+  );
+  
   app.options("*", cors());
   app.use(express.json());
   app.use(cookieParser());
