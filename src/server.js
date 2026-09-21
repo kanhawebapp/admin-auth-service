@@ -30,17 +30,28 @@ async function startServer() {
 
 
   const corsOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
-    : [];
-   console.log("---comming for cors URL--------------",corsOrigins);
-  app.use(
-    cors({
-      origin: corsOrigins,
-      credentials: true,
-    }),
-  );
+  ? process.env.CORS_ORIGINS
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : [];
 
-  app.options("*", cors());
+console.log(
+  "--- CORS allowed origins ---",
+  corsOrigins
+);
+
+const corsOptions = {
+  origin: corsOrigins,
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests using the SAME CORS configuration
+app.options("*", cors(corsOptions));
   app.use(express.json());
   app.use(cookieParser());
   app.use(rateLimiter);
