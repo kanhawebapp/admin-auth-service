@@ -2645,7 +2645,13 @@ sessionDate: DateTime!
       data: UpdateAstrologerInput!
     ): Astrologer!
 
-    deleteAstrologer(astrologerId: ID!): Boolean!
+   
+deleteAstrologer(
+  astrologerId: ID!
+  deleteRemark: String
+): Boolean!
+
+
 
     rejectAstrologer(
       astrologerId: ID!

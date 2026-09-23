@@ -7228,37 +7228,49 @@ if (data.applicationId) {
     },
 
     // ================= DELETE ASTROLOGER =================
-    deleteAstrologer: async (_, { astrologerId }, context) => {
-      try {
-        if (
-          !context.user ||
-          !["SUPER_ADMIN", "MANAGER"].includes(context.user.role?.name)
-        )
-          throw new Error("Not authorized");
+   
+deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
+  try {
+    if (
+      !context.user ||
+      !["SUPER_ADMIN", "MANAGER"].includes(context.user.role?.name)
+    ) {
+      throw new Error("Not authorized");
+    }
 
-        const existing = await prisma.astrologer.findUnique({
-          where: { id: astrologerId },
-        });
+    const existing = await prisma.astrologer.findUnique({
+      where: { id: astrologerId },
+    });
 
-        if (!existing) throw new Error("Astrologer not found");
+    if (!existing) {
+      throw new Error("Astrologer not found");
+    }
 
-        await prisma.astrologer.update({
-          where: { id: astrologerId },
-          data: {
-            isDeleted: true,
-            status: false,
-            isOnline: false,
-            isBusy: false,
-            isChatActive: false,
-            isCallActive: false,
-            isLiveActive: false,
-          },
-        });
-        return true;
-      } catch (error) {
-        throw new Error(error.message || "Failed to delete astrologer");
-      }
-    },
+    await prisma.astrologer.update({
+      where: { id: astrologerId },
+      data: {
+        isDeleted: true,
+        status: false,
+        isOnline: false,
+        isBusy: false,
+        isChatActive: false,
+        isCallActive: false,
+        isLiveActive: false,
+
+        deletedAt: new Date(),
+        deletedById: context.user.id,
+        deletedByName: context.user.name,
+        deleteRemark: deleteRemark || null,
+      },
+    });
+
+    return true;
+  } catch (error) {
+    throw new Error(error.message || "Failed to delete astrologer");
+  }
+},
+
+
 
     // ================= UPDATE USER =================
     updateUser: async (_, { userId, data }, context) => {
