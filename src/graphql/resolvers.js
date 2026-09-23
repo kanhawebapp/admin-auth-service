@@ -7229,6 +7229,7 @@ if (data.applicationId) {
 
     // ================= DELETE ASTROLOGER =================
    
+
 deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
   try {
     if (
@@ -7246,29 +7247,44 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
       throw new Error("Astrologer not found");
     }
 
-    await prisma.astrologer.update({
-      where: { id: astrologerId },
-      data: {
-        isDeleted: true,
-        status: false,
-        isOnline: false,
-        isBusy: false,
-        isChatActive: false,
-        isCallActive: false,
-        isLiveActive: false,
+    await prisma.$transaction(async (tx) => {
+      // Update fields managed by Prisma schema
+      await tx.astrologer.update({
+        where: { id: astrologerId },
+        data: {
+          isDeleted: true,
+          status: false,
+          isOnline: false,
+          isBusy: false,
+          isChatActive: false,
+          isCallActive: false,
+          isLiveActive: false,
+        },
+      });
 
-        deletedAt: new Date(),
-        deletedById: context.user.id,
-        deletedByName: context.user.name,
-        deleteRemark: deleteRemark || null,
-      },
+      // Update fields that are intentionally NOT in schema.prisma
+      await tx.$executeRaw`
+        UPDATE "Astrologer"
+        SET
+          "deletedAt" = NOW(),
+          "deletedById" = ${context.user.id},
+          "deletedByName" = ${context.user.name},
+          "deleteRemark" = ${deleteRemark || null}
+        WHERE "id" = ${astrologerId}
+      `;
     });
 
     return true;
   } catch (error) {
-    throw new Error(error.message || "Failed to delete astrologer");
+    console.error("deleteAstrologer error:", error);
+
+    throw new Error(
+      error.message || "Failed to delete astrologer"
+    );
   }
 },
+
+
 
 
 
