@@ -5324,26 +5324,56 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
   // **********************************************START MUTATION**********************************
 
   Mutation: {
+
 restoreAstrologer: async (_, { astrologerId }, context) => {
   const { prisma } = context;
 
   await checkPermission(context, "astrologer-list.update");
 
   try {
+    const existing = await prisma.astrologer.findUnique({
+      where: {
+        id: astrologerId,
+      },
+    });
+
+    if (!existing) {
+      throw new Error("Astrologer not found");
+    }
+
+    if (!existing.isDeleted) {
+      throw new Error("Astrologer is already active");
+    }
+
     await prisma.astrologer.update({
       where: {
         id: astrologerId,
       },
       data: {
+        // Restore astrologer
         isDeleted: false,
+        status: true,
+
+        // Make sure all activity states are reset correctly
+        isOnline: false,
+        isBusy: false,
+        isChatActive: false,
+        isCallActive: false,
+        isLiveActive: false,
       },
     });
 
     return true;
   } catch (error) {
-    throw new Error(error.message || "Failed to activate astrologer");
+    console.error("restoreAstrologer error:", error);
+
+    throw new Error(
+      error.message || "Failed to restore astrologer"
+    );
   }
 },
+
+
     createRefundRequest: async (_, { input }, context) => {
       try {
         const { prisma, user } = context;
