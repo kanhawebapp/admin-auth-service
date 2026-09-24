@@ -208,6 +208,13 @@ isEligibleCall: Boolean!
 isEligibleVideo: Boolean!
 isEligibleAudio: Boolean!
 isDeleted: Boolean!
+
+ 
+  deletedAt: DateTime!
+  deletedById: String!
+  deletedByName: String!
+  deleteRemark: String!
+
     createdAt: DateTime
     updatedAt: DateTime
   }
