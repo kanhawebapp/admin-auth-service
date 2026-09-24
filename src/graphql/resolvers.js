@@ -7238,6 +7238,7 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
     ) {
       throw new Error("Not authorized");
     }
+    console.log("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",context.user.id,context.user.name,deleteRemark,astrologerId);
 
     const existing = await prisma.astrologer.findUnique({
       where: { id: astrologerId },
