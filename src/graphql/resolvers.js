@@ -7230,6 +7230,7 @@ if (data.applicationId) {
     // ================= DELETE ASTROLOGER =================
    
 
+
 deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
   try {
     if (
@@ -7238,7 +7239,16 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
     ) {
       throw new Error("Not authorized");
     }
-    console.log("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",context.user.id,context.user.name,deleteRemark,astrologerId);
+
+    console.log(
+      "DELETE ASTRO INPUT:",
+      {
+        userId: context.user.id,
+        userName: context.user.name,
+        deleteRemark,
+        astrologerId,
+      }
+    );
 
     const existing = await prisma.astrologer.findUnique({
       where: { id: astrologerId },
@@ -7249,7 +7259,7 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update fields managed by Prisma schema
+      // Fields managed by Prisma schema
       await tx.astrologer.update({
         where: { id: astrologerId },
         data: {
@@ -7263,8 +7273,8 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
         },
       });
 
-      // Update fields that are intentionally NOT in schema.prisma
-      await tx.$executeRaw`
+      // Fields NOT present in schema.prisma
+      const updatedRows = await tx.$executeRaw`
         UPDATE "Astrologer"
         SET
           "deletedAt" = NOW(),
@@ -7273,6 +7283,27 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
           "deleteRemark" = ${deleteRemark || null}
         WHERE "id" = ${astrologerId}
       `;
+
+      console.log("RAW UPDATE AFFECTED ROWS:", updatedRows);
+
+      if (updatedRows !== 1) {
+        throw new Error(
+          `Delete metadata update affected ${updatedRows} rows`
+        );
+      }
+
+      const verification = await tx.$queryRaw`
+        SELECT
+          "id",
+          "deletedAt",
+          "deletedById",
+          "deletedByName",
+          "deleteRemark"
+        FROM "Astrologer"
+        WHERE "id" = ${astrologerId}
+      `;
+
+      console.log("DELETE METADATA AFTER UPDATE:", verification);
     });
 
     return true;
@@ -7284,6 +7315,8 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
     );
   }
 },
+
+
 
 
 
