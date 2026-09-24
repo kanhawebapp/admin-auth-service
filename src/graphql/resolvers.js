@@ -7231,6 +7231,7 @@ if (data.applicationId) {
    
 
 
+
 deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
   try {
     if (
@@ -7240,70 +7241,44 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
       throw new Error("Not authorized");
     }
 
-    console.log(
-      "DELETE ASTRO INPUT:",
-      {
-        userId: context.user.id,
-        userName: context.user.name,
-        deleteRemark,
-        astrologerId,
-      }
-    );
+    console.log("DELETE ASTRO INPUT:", {
+      userId: context.user.id,
+      userName: context.user.name,
+      deleteRemark,
+      astrologerId,
+    });
 
     const existing = await prisma.astrologer.findUnique({
-      where: { id: astrologerId },
+      where: {
+        id: astrologerId,
+      },
     });
 
     if (!existing) {
       throw new Error("Astrologer not found");
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Fields managed by Prisma schema
-      await tx.astrologer.update({
-        where: { id: astrologerId },
-        data: {
-          isDeleted: true,
-          status: false,
-          isOnline: false,
-          isBusy: false,
-          isChatActive: false,
-          isCallActive: false,
-          isLiveActive: false,
-        },
-      });
+    await prisma.astrologer.update({
+      where: {
+        id: astrologerId,
+      },
 
-      // Fields NOT present in schema.prisma
-      const updatedRows = await tx.$executeRaw`
-        UPDATE "Astrologer"
-        SET
-          "deletedAt" = NOW(),
-          "deletedById" = ${context.user.id},
-          "deletedByName" = ${context.user.name},
-          "deleteRemark" = ${deleteRemark || null}
-        WHERE "id" = ${astrologerId}
-      `;
+      data: {
+        // Existing delete logic
+        isDeleted: true,
+        status: false,
+        isOnline: false,
+        isBusy: false,
+        isChatActive: false,
+        isCallActive: false,
+        isLiveActive: false,
 
-      console.log("RAW UPDATE AFFECTED ROWS:", updatedRows);
-
-      if (updatedRows !== 1) {
-        throw new Error(
-          `Delete metadata update affected ${updatedRows} rows`
-        );
-      }
-
-      const verification = await tx.$queryRaw`
-        SELECT
-          "id",
-          "deletedAt",
-          "deletedById",
-          "deletedByName",
-          "deleteRemark"
-        FROM "Astrologer"
-        WHERE "id" = ${astrologerId}
-      `;
-
-      console.log("DELETE METADATA AFTER UPDATE:", verification);
+        // Delete metadata
+        deletedAt: new Date(),
+        deletedById: context.user.id,
+        deletedByName: context.user.name,
+        deleteRemark: deleteRemark || null,
+      },
     });
 
     return true;
@@ -7315,6 +7290,7 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
     );
   }
 },
+
 
 
 
