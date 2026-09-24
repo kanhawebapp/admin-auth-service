@@ -203,21 +203,21 @@ const typeDefs = gql`
     isBusy: Boolean!
     isOnline: Boolean!
     isPromotional: Boolean!
-isEligibleChat: Boolean!
-isEligibleCall: Boolean!
-isEligibleVideo: Boolean!
-isEligibleAudio: Boolean!
-isDeleted: Boolean!
 
- 
-  deletedAt: DateTime!
-  deletedById: String!
-  deletedByName: String!
-  deleteRemark: String!
+    isEligibleChat: Boolean!
+    isEligibleCall: Boolean!
+    isEligibleVideo: Boolean!
+    isEligibleAudio: Boolean!
+    isDeleted: Boolean!
+
+    deletedAt: DateTime
+    deletedById: String
+    deletedByName: String
+    deleteRemark: String
 
     createdAt: DateTime
     updatedAt: DateTime
-  }
+}
 
   type Address {
     street: String!
