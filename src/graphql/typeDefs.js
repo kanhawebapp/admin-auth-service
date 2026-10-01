@@ -2321,12 +2321,12 @@ sessionDate: DateTime!
   #-------------END CODE FOR ASTROLOGER PAYOUT--------
 
   #---------GET BOOKED SERVICE-----------
-  type AdminServiceBookingReport {
+ type AdminServiceBookingReport {
   id: ID!
   userName: String
   userMobile: String
   serviceName: String
-  bookingStatus: BookingStatus!
+  bookingStatus: String!
   bookingDate: DateTime!
   assignedTo: String
 }
@@ -2576,7 +2576,7 @@ type AdminServiceBookingReportResponse {
     getAdminServiceBookingReport(
     page: Int
     limit: Int
-    bookingStatus: BookingStatus
+    bookingStatus: String
   ): AdminServiceBookingReportResponse!
   }
 

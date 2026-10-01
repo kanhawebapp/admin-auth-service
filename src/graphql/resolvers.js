@@ -5319,7 +5319,8 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
         throw new Error(error.message || "Failed to fetch refund requests");
       }
     },
-  getAdminServiceBookingReport: async (
+
+getAdminServiceBookingReport: async (
   _,
   {
     page = 1,
@@ -5340,13 +5341,36 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
     }
 
     const currentPage = Math.max(1, page);
-    const take = Math.min(Math.max(1, limit), 100);
+
+    const take = Math.min(
+      Math.max(1, limit),
+      100,
+    );
+
     const skip = (currentPage - 1) * take;
 
+    const validBookingStatuses = [
+      "PENDING",
+      "ASSIGNED",
+      "COMPLETED",
+      "CANCELLED",
+    ];
+
+    if (
+      bookingStatus &&
+      !validBookingStatuses.includes(bookingStatus)
+    ) {
+      throw new Error(
+        `Invalid booking status: ${bookingStatus}`,
+      );
+    }
+
     const where = {
-      ...(bookingStatus && {
-        bookingStatus,
-      }),
+      ...(bookingStatus
+        ? {
+            bookingStatus,
+          }
+        : {}),
     };
 
     const [bookings, total] = await Promise.all([
@@ -5429,6 +5453,7 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
     );
   }
 },
+
   },
 
   // **********************************************START MUTATION**********************************
