@@ -5335,7 +5335,7 @@ getAdminServiceBookingReport: async (
     // ==========================================
     if (
       !context.user ||
-      context.user.role !== "SUPER_ADMIN"
+      context.user.role.name !== "SUPER_ADMIN"
     ) {
       throw new Error(
         "Only SUPER_ADMIN can view service booking reports",
