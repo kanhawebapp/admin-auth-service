@@ -5330,7 +5330,9 @@ getAdminServiceBookingReport: async (
   context,
 ) => {
   try {
-    // SUPER_ADMIN only
+    // ==========================================
+    // SUPER_ADMIN ONLY
+    // ==========================================
     if (
       !context.user ||
       context.user.role !== "SUPER_ADMIN"
@@ -5340,42 +5342,44 @@ getAdminServiceBookingReport: async (
       );
     }
 
-    const currentPage = Math.max(1, page);
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+    const currentPage = Math.max(1, Number(page) || 1);
 
     const take = Math.min(
-      Math.max(1, limit),
+      Math.max(1, Number(limit) || 20),
       100,
     );
 
     const skip = (currentPage - 1) * take;
 
-    const validBookingStatuses = [
-      "PENDING",
-      "ASSIGNED",
-      "COMPLETED",
-      "CANCELLED",
-    ];
+    // ==========================================
+    // FILTER
+    //
+    // bookingStatus = null
+    // => FETCH ALL BOOKING STATUSES
+    //
+    // bookingStatus = "PENDING"
+    // => FETCH ONLY PENDING
+    // ==========================================
+    const where = {};
 
     if (
-      bookingStatus &&
-      !validBookingStatuses.includes(bookingStatus)
+      bookingStatus !== null &&
+      bookingStatus !== undefined &&
+      bookingStatus !== ""
     ) {
-      throw new Error(
-        `Invalid booking status: ${bookingStatus}`,
-      );
+      where.bookingStatus = bookingStatus;
     }
 
-    const where = {
-      ...(bookingStatus
-        ? {
-            bookingStatus,
-          }
-        : {}),
-    };
-
+    // ==========================================
+    // FETCH BOOKINGS + TOTAL
+    // ==========================================
     const [bookings, total] = await Promise.all([
       prisma.serviceBooking.findMany({
         where,
+
         skip,
         take,
 
@@ -5416,6 +5420,9 @@ getAdminServiceBookingReport: async (
       }),
     ]);
 
+    // ==========================================
+    // FORMAT RESPONSE
+    // ==========================================
     const data = bookings.map((booking) => ({
       id: booking.id,
 
@@ -5427,18 +5434,27 @@ getAdminServiceBookingReport: async (
 
       bookingStatus: booking.bookingStatus,
 
-      bookingDate: booking.createdAt,
+      bookingDate: booking.createdAt
+        ? booking.createdAt.toISOString()
+        : null,
 
-      assignedTo:
-        booking.astrologer?.name || null,
+      assignedTo: booking.astrologer?.name || null,
     }));
 
+    // ==========================================
+    // RETURN
+    // ==========================================
     return {
       success: true,
+
       total,
+
       currentPage,
+
       totalPages: Math.ceil(total / take),
+
       limit: take,
+
       data,
     };
   } catch (error) {
@@ -5453,7 +5469,6 @@ getAdminServiceBookingReport: async (
     );
   }
 },
-
   },
 
   // **********************************************START MUTATION**********************************
