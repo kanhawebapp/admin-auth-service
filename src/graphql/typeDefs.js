@@ -2320,6 +2320,26 @@ sessionDate: DateTime!
 
   #-------------END CODE FOR ASTROLOGER PAYOUT--------
 
+  #---------GET BOOKED SERVICE-----------
+  type AdminServiceBookingReport {
+  id: ID!
+  userName: String
+  userMobile: String
+  serviceName: String
+  bookingStatus: BookingStatus!
+  bookingDate: DateTime!
+  assignedTo: String
+}
+
+type AdminServiceBookingReportResponse {
+  success: Boolean!
+  total: Int!
+  currentPage: Int!
+  totalPages: Int!
+  limit: Int!
+  data: [AdminServiceBookingReport!]!
+}
+
   type Query {
      getRefundRequests(
     searchInput: RefundRequestSearchInput
@@ -2552,6 +2572,12 @@ sessionDate: DateTime!
     ): AstrologerFollowerResponse!
     exportAstrologers(query: String): [Astrologer]
     payoutReport(fromDate: String!, toDate: String!): [PayoutReport!]!
+
+    getAdminServiceBookingReport(
+    page: Int
+    limit: Int
+    bookingStatus: BookingStatus
+  ): AdminServiceBookingReportResponse!
   }
 
   type Mutation {

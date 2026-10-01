@@ -5319,6 +5319,116 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
         throw new Error(error.message || "Failed to fetch refund requests");
       }
     },
+  getAdminServiceBookingReport: async (
+  _,
+  {
+    page = 1,
+    limit = 20,
+    bookingStatus,
+  },
+  context,
+) => {
+  try {
+    // SUPER_ADMIN only
+    if (
+      !context.user ||
+      context.user.role !== "SUPER_ADMIN"
+    ) {
+      throw new Error(
+        "Only SUPER_ADMIN can view service booking reports",
+      );
+    }
+
+    const currentPage = Math.max(1, page);
+    const take = Math.min(Math.max(1, limit), 100);
+    const skip = (currentPage - 1) * take;
+
+    const where = {
+      ...(bookingStatus && {
+        bookingStatus,
+      }),
+    };
+
+    const [bookings, total] = await Promise.all([
+      prisma.serviceBooking.findMany({
+        where,
+        skip,
+        take,
+
+        orderBy: {
+          createdAt: "desc",
+        },
+
+        select: {
+          id: true,
+
+          bookingStatus: true,
+
+          createdAt: true,
+
+          user: {
+            select: {
+              name: true,
+              mobile: true,
+            },
+          },
+
+          service: {
+            select: {
+              name: true,
+            },
+          },
+
+          astrologer: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+
+      prisma.serviceBooking.count({
+        where,
+      }),
+    ]);
+
+    const data = bookings.map((booking) => ({
+      id: booking.id,
+
+      userName: booking.user?.name || null,
+
+      userMobile: booking.user?.mobile || null,
+
+      serviceName: booking.service?.name || null,
+
+      bookingStatus: booking.bookingStatus,
+
+      bookingDate: booking.createdAt,
+
+      assignedTo:
+        booking.astrologer?.name || null,
+    }));
+
+    return {
+      success: true,
+      total,
+      currentPage,
+      totalPages: Math.ceil(total / take),
+      limit: take,
+      data,
+    };
+  } catch (error) {
+    console.error(
+      "getAdminServiceBookingReport error:",
+      error,
+    );
+
+    throw new Error(
+      error.message ||
+        "Failed to fetch service booking report",
+    );
+  }
+},
   },
 
   // **********************************************START MUTATION**********************************
