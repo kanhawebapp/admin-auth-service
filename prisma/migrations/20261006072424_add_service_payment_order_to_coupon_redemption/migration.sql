@@ -10,8 +10,18 @@
   - Added the required column `updatedAt` to the `Review` table without a default value. This is not possible if the table is not empty.
 
 */
--- CreateEnum
-CREATE TYPE "BookingStatus" AS ENUM ('PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
+DO $$
+BEGIN
+  CREATE TYPE "BookingStatus" AS ENUM (
+    'PENDING',
+    'ASSIGNED',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'CANCELLED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateEnum
 CREATE TYPE "BannerType" AS ENUM ('DESKTOP', 'MOBILE');
