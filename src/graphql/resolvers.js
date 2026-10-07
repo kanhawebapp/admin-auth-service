@@ -7701,7 +7701,7 @@ deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
 
       return prisma.coupon.create({
         data: {
-          code: input.code,
+          code: input.code?.toUpperCase(),
           description: input.description,
 
           applicable: input.applicable,
