@@ -5356,12 +5356,6 @@ getAdminServiceBookingReport: async (
 
     // ==========================================
     // FILTER
-    //
-    // bookingStatus = null
-    // => FETCH ALL BOOKING STATUSES
-    //
-    // bookingStatus = "PENDING"
-    // => FETCH ONLY PENDING
     // ==========================================
     const where = {};
 
@@ -5394,6 +5388,9 @@ getAdminServiceBookingReport: async (
 
           createdAt: true,
 
+          // Original service amount
+          amount: true,
+
           user: {
             select: {
               name: true,
@@ -5412,6 +5409,32 @@ getAdminServiceBookingReport: async (
               name: true,
             },
           },
+
+          // ==========================================
+          // PAYMENT ORDER
+          // ==========================================
+          servicePaymentOrder: {
+            select: {
+              id: true,
+
+              amount: true,
+
+              originalAmount: true,
+
+              discount: true,
+
+              couponCode: true,
+
+              couponType: true,
+
+              coupon: {
+                select: {
+                  code: true,
+                  type: true,
+                },
+              },
+            },
+          },
         },
       }),
 
@@ -5423,23 +5446,81 @@ getAdminServiceBookingReport: async (
     // ==========================================
     // FORMAT RESPONSE
     // ==========================================
-    const data = bookings.map((booking) => ({
-      id: booking.id,
+    const data = bookings.map((booking) => {
+      const paymentOrder = booking.servicePaymentOrder;
 
-      userName: booking.user?.name || null,
+      const originalAmount = Number(
+        paymentOrder?.originalAmount ??
+          booking.amount ??
+          0,
+      );
 
-      userMobile: booking.user?.mobile || null,
+      const discountAmount =
+        paymentOrder?.couponType === "DISCOUNT"
+          ? Number(paymentOrder?.discount ?? 0)
+          : 0;
 
-      serviceName: booking.service?.name || null,
+      const cashbackAmount =
+        paymentOrder?.couponType === "CASHBACK"
+          ? Number(paymentOrder?.discount ?? 0)
+          : 0;
 
-      bookingStatus: booking.bookingStatus,
+      // ==========================================
+      // FINAL USER PAID AMOUNT
+      //
+      // DISCOUNT:
+      // original amount - discount
+      //
+      // CASHBACK:
+      // user pays full amount
+      // ==========================================
+      const finalPaidAmount =
+        paymentOrder?.couponType === "DISCOUNT"
+          ? originalAmount - discountAmount
+          : originalAmount;
 
-      bookingDate: booking.createdAt
-        ? booking.createdAt.toISOString()
-        : null,
+      return {
+        id: booking.id,
 
-      assignedTo: booking.astrologer?.name || null,
-    }));
+        // Original service amount
+        amount: originalAmount,
+
+        // Coupon information
+        couponName:
+          paymentOrder?.coupon?.code ||
+          paymentOrder?.couponCode ||
+          null,
+
+        couponType:
+          paymentOrder?.coupon?.type ||
+          paymentOrder?.couponType ||
+          null,
+
+        // Discount amount
+        discountAmount,
+
+        // Cashback amount
+        cashbackAmount,
+
+        // Actual amount paid by user
+        finalPaidAmount,
+
+        userName: booking.user?.name || null,
+
+        userMobile: booking.user?.mobile || null,
+
+        serviceName: booking.service?.name || null,
+
+        bookingStatus: booking.bookingStatus,
+
+        bookingDate: booking.createdAt
+          ? booking.createdAt.toISOString()
+          : null,
+
+        assignedTo:
+          booking.astrologer?.name || null,
+      };
+    });
 
     // ==========================================
     // RETURN
@@ -5469,6 +5550,7 @@ getAdminServiceBookingReport: async (
     );
   }
 },
+
   },
 
   // **********************************************START MUTATION**********************************

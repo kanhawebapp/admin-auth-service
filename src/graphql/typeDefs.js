@@ -2323,12 +2323,28 @@ sessionDate: DateTime!
   #---------GET BOOKED SERVICE-----------
 type AdminServiceBookingReport {
   id: ID!
+
   userName: String
   userMobile: String
   serviceName: String
+
   bookingStatus: String!
   bookingDate: String!
   assignedTo: String
+
+  # Original service amount
+  amount: Float!
+
+  # Coupon information
+  couponName: String
+  couponType: String
+
+  # Coupon amounts
+  discountAmount: Float!
+  cashbackAmount: Float!
+
+  # Actual amount paid by user
+  finalPaidAmount: Float!
 }
 
 type AdminServiceBookingReportResponse {
