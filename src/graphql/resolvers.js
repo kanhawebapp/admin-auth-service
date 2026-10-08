@@ -5554,10 +5554,16 @@ export const resolvers = {
                 originalAmount - discountAmount,
               ),
           );
-        } else {
-          finalPaidAmount = originalAmount;
         }
+        if (couponType === "CASHBACK") {
+          finalPaidAmount = Number(
+            paymentOrder.payableAmount
+              
+          );
+        } 
+        
       } else {
+        console.log("----------else originalAmount--------",originalAmount);
         finalPaidAmount = originalAmount;
       }
 
