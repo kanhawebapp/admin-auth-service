@@ -523,9 +523,7 @@ export const resolvers = {
           orderBy.createdAt = "desc";
         }
 
-       
-        const where = {        
-
+        const where = {
           ...(query
             ? {
                 OR: [
@@ -1262,250 +1260,246 @@ export const resolvers = {
 
     // -------------------- RESOLVER --------------------
 
-getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
-  try {
-    const {
-      query,
-      sessionId,
-      astrologerName,
-      userId,
-      status,
-      filterType,
-      startDate,
-      endDate,
-      page = 1,
-      limit = 10,
-    } = searchInput;
+    getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
+      try {
+        const {
+          query,
+          sessionId,
+          astrologerName,
+          userId,
+          status,
+          filterType,
+          startDate,
+          endDate,
+          page = 1,
+          limit = 10,
+        } = searchInput;
 
-    const safePage = Math.max(page, 1);
-    const safeLimit = Math.min(limit, 100);
+        const safePage = Math.max(page, 1);
+        const safeLimit = Math.min(limit, 100);
 
-    const skip = (safePage - 1) * safeLimit;
+        const skip = (safePage - 1) * safeLimit;
 
-    // ---------------- WHERE CONDITION ----------------
+        // ---------------- WHERE CONDITION ----------------
 
-    const where = {
-      type: "CHAT",
-    };
+        const where = {
+          type: "CHAT",
+        };
 
-    if (userId) {
-      where.userId = userId;
-    }
+        if (userId) {
+          where.userId = userId;
+        }
 
-    // ---------------- SEARCH FILTER ----------------
+        // ---------------- SEARCH FILTER ----------------
 
-    const searchFilters = [];
+        const searchFilters = [];
 
-    if (query) {
-      searchFilters.push(
-        {
-          id: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
-        {
-          user: {
+        if (query) {
+          searchFilters.push(
+            {
+              id: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+            {
+              user: {
+                name: {
+                  contains: query,
+                  mode: "insensitive",
+                },
+              },
+            },
+          );
+        }
+
+        if (sessionId) {
+          where.id = sessionId;
+        }
+
+        if (searchFilters.length > 0) {
+          where.OR = searchFilters;
+        }
+
+        // ---------------- ASTROLOGER FILTER ----------------
+
+        if (astrologerName) {
+          where.astrologer = {
             name: {
-              contains: query,
+              contains: astrologerName,
               mode: "insensitive",
             },
-          },
+          };
         }
-      );
-    }
 
-    if (sessionId) {
-      where.id = sessionId;
-    }
+        // ---------------- STATUS FILTER ----------------
 
-    if (searchFilters.length > 0) {
-      where.OR = searchFilters;
-    }
+        if (status) {
+          where.status = status;
+        }
 
-    // ---------------- ASTROLOGER FILTER ----------------
+        // ---------------- DATE FILTER ----------------
 
-    if (astrologerName) {
-      where.astrologer = {
-        name: {
-          contains: astrologerName,
-          mode: "insensitive",
-        },
-      };
-    }
+        let start;
+        let end;
 
-    // ---------------- STATUS FILTER ----------------
+        if (filterType) {
+          switch (filterType) {
+            case "TODAY":
+              start = new Date();
+              start.setHours(0, 0, 0, 0);
 
-    if (status) {
-      where.status = status;
-    }
+              end = new Date();
+              break;
 
-    // ---------------- DATE FILTER ----------------
+            case "WEEK":
+              start = new Date();
+              start.setDate(start.getDate() - 7);
 
-    let start;
-    let end;
+              end = new Date();
+              break;
 
-    if (filterType) {
-      switch (filterType) {
-        case "TODAY":
-          start = new Date();
-          start.setHours(0, 0, 0, 0);
+            case "MONTH":
+              start = new Date();
+              start.setMonth(start.getMonth() - 1);
 
-          end = new Date();
-          break;
+              end = new Date();
+              break;
 
-        case "WEEK":
-          start = new Date();
-          start.setDate(start.getDate() - 7);
+            case "YEAR":
+              start = new Date();
+              start.setFullYear(start.getFullYear() - 1);
 
-          end = new Date();
-          break;
+              end = new Date();
+              break;
 
-        case "MONTH":
-          start = new Date();
-          start.setMonth(start.getMonth() - 1);
+            case "CUSTOM":
+              start = startDate
+                ? new Date(`${startDate}T00:00:00+05:30`)
+                : undefined;
 
-          end = new Date();
-          break;
+              end = endDate ? new Date(`${endDate}T00:00:00+05:30`) : undefined;
 
-        case "YEAR":
-          start = new Date();
-          start.setFullYear(start.getFullYear() - 1);
+              if (end) {
+                end.setDate(end.getDate() + 1);
+              }
 
-          end = new Date();
-          break;
+              break;
+          }
+        }
 
-        case "CUSTOM":
-          start = startDate
-            ? new Date(`${startDate}T00:00:00+05:30`)
-            : undefined;
+        if (start || end) {
+          where.createdAt = {};
 
-          end = endDate
-            ? new Date(`${endDate}T00:00:00+05:30`)
-            : undefined;
-
-          if (end) {
-            end.setDate(end.getDate() + 1);
+          if (start) {
+            where.createdAt.gte = start;
           }
 
-          break;
-      }
-    }
+          if (end) {
+            where.createdAt.lt = end;
+          }
+        }
 
-    if (start || end) {
-      where.createdAt = {};
+        // ---------------- FETCH DATA ----------------
 
-      if (start) {
-        where.createdAt.gte = start;
-      }
+        const [sessions, totalCount, aggregate] = await Promise.all([
+          prisma.session.findMany({
+            where,
 
-      if (end) {
-        where.createdAt.lt = end;
-      }
-    }
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  mobile: true,
+                  countryCode: true,
+                },
+              },
 
-    // ---------------- FETCH DATA ----------------
+              astrologer: {
+                select: {
+                  id: true,
+                  name: true,
+                  displayName: true,
+                },
+              },
 
-    const [sessions, totalCount, aggregate] = await Promise.all([
-      prisma.session.findMany({
-        where,
-
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              mobile: true,
-              countryCode: true,
+              remedies: {
+                select: {
+                  id: true,
+                },
+                take: 1,
+              },
             },
-          },
 
-          astrologer: {
-            select: {
-              id: true,
-              name: true,
-              displayName: true,
+            orderBy: {
+              createdAt: "desc",
             },
-          },
 
-          remedies: {
-            select: {
-              id: true,
+            skip,
+            take: safeLimit,
+          }),
+
+          prisma.session.count({
+            where,
+          }),
+
+          prisma.session.aggregate({
+            where,
+
+            _sum: {
+              coinsDeducted: true,
+              coinsEarned: true,
+              commission: true,
             },
-            take: 1,
-          },
-        },
+          }),
+        ]);
 
-        orderBy: {
-          createdAt: "desc",
-        },
+        // ---------------- FORMAT RESPONSE ----------------
 
-        skip,
-        take: safeLimit,
-      }),
+        const formattedData = sessions.map((session) => ({
+          sessionId: session.id,
+          userId: session.userId,
+          source: session.source,
+          userName: session.user?.name || "",
+          mobile: session.user?.mobile || "",
+          by: session.by,
 
-      prisma.session.count({
-        where,
-      }),
+          astrologerId: session.astrologer?.id || null,
+          astrologerName:
+            session.astrologer?.displayName || session.astrologer?.name || "",
 
-      prisma.session.aggregate({
-        where,
+          type: session.type,
+          status: session.status,
 
-        _sum: {
-          coinsDeducted: true,
-          coinsEarned: true,
-          commission: true,
-        },
-      }),
-    ]);
+          ratePerMin: session.ratePerMin || 0,
+          durationSec: session.durationSec || 0,
 
-    // ---------------- FORMAT RESPONSE ----------------
+          coinsDeducted: session.coinsDeducted || 0,
+          coinsEarned: session.coinsEarned || 0,
+          commission: session.commission || 0,
 
-    const formattedData = sessions.map((session) => ({
-      sessionId: session.id,
-      userId: session.userId,
-      source: session.source,
-      userName: session.user?.name || "",
-      mobile: session.user?.mobile || "",
-      by: session.by,
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
 
-      astrologerId: session.astrologer?.id || null,
-      astrologerName:
-        session.astrologer?.displayName ||
-        session.astrologer?.name ||
-        "",
+          hasRemedy: session.remedies.length > 0,
+          createdAt: session.createdAt,
+        }));
 
-      type: session.type,
-      status: session.status,
+        return {
+          data: formattedData,
+          totalCount,
+          currentPage: safePage,
+          totalPages: Math.ceil(totalCount / safeLimit),
 
-      ratePerMin: session.ratePerMin || 0,
-      durationSec: session.durationSec || 0,
-
-      coinsDeducted: session.coinsDeducted || 0,
-      coinsEarned: session.coinsEarned || 0,
-      commission: session.commission || 0,
-
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-
-      hasRemedy: session.remedies.length > 0,
-      createdAt: session.createdAt,
-    }));
-
-    return {
-      data: formattedData,
-      totalCount,
-      currentPage: safePage,
-      totalPages: Math.ceil(totalCount / safeLimit),
-
-      totalCoinsDeducted: aggregate?._sum?.coinsDeducted || 0,
-      totalCoinsEarned: aggregate?._sum?.coinsEarned || 0,
-      totalCommission: aggregate?._sum?.commission || 0,
-    };
-  } catch (error) {
-    throw new Error("Failed to fetch users chat history");
-  }
-},
+          totalCoinsDeducted: aggregate?._sum?.coinsDeducted || 0,
+          totalCoinsEarned: aggregate?._sum?.coinsEarned || 0,
+          totalCommission: aggregate?._sum?.commission || 0,
+        };
+      } catch (error) {
+        throw new Error("Failed to fetch users chat history");
+      }
+    },
     getCallRecording: async (_, { sessionId }, { prisma }) => {
       return prisma.callRecording.findFirst({
         where: {
@@ -5320,23 +5314,16 @@ getUsersChatHistory: async (_, { searchInput }, { prisma }) => {
       }
     },
 
-getAdminServiceBookingReport: async (
+    getAdminServiceBookingReport: async (
   _,
-  {
-    page = 1,
-    limit = 20,
-    bookingStatus,
-  },
+  { page = 1, limit = 20, bookingStatus },
   context,
 ) => {
   try {
     // ==========================================
     // SUPER_ADMIN ONLY
     // ==========================================
-    if (
-      !context.user ||
-      context.user.role.name !== "SUPER_ADMIN"
-    ) {
+    if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
       throw new Error(
         "Only SUPER_ADMIN can view service booking reports",
       );
@@ -5388,9 +5375,14 @@ getAdminServiceBookingReport: async (
 
           createdAt: true,
 
-          // Original service amount
+          // ==========================================
+          // ORIGINAL SERVICE AMOUNT
+          // ==========================================
           amount: true,
 
+          // ==========================================
+          // USER
+          // ==========================================
           user: {
             select: {
               name: true,
@@ -5398,12 +5390,18 @@ getAdminServiceBookingReport: async (
             },
           },
 
+          // ==========================================
+          // SERVICE
+          // ==========================================
           service: {
             select: {
               name: true,
             },
           },
 
+          // ==========================================
+          // ASTROLOGER
+          // ==========================================
           astrologer: {
             select: {
               name: true,
@@ -5411,9 +5409,9 @@ getAdminServiceBookingReport: async (
           },
 
           // ==========================================
-          // PAYMENT ORDER
+          // PAYMENT ORDERS
           // ==========================================
-          servicePaymentOrder: {
+          paymentOrders: {
             select: {
               id: true,
 
@@ -5434,6 +5432,12 @@ getAdminServiceBookingReport: async (
                 },
               },
             },
+
+            orderBy: {
+              createdAt: "desc",
+            },
+
+            take: 1,
           },
         },
       }),
@@ -5447,78 +5451,111 @@ getAdminServiceBookingReport: async (
     // FORMAT RESPONSE
     // ==========================================
     const data = bookings.map((booking) => {
-      const paymentOrder = booking.servicePaymentOrder;
+      // paymentOrders is an array
+      const paymentOrder = booking.paymentOrders?.[0] || null;
 
+      // ==========================================
+      // ORIGINAL AMOUNT
+      // ==========================================
       const originalAmount = Number(
         paymentOrder?.originalAmount ??
           booking.amount ??
+          paymentOrder?.amount ??
           0,
       );
 
-      const discountAmount =
-        paymentOrder?.couponType === "DISCOUNT"
-          ? Number(paymentOrder?.discount ?? 0)
-          : 0;
+      // ==========================================
+      // COUPON TYPE
+      // ==========================================
+      const couponType =
+        paymentOrder?.coupon?.type ||
+        paymentOrder?.couponType ||
+        null;
 
-      const cashbackAmount =
-        paymentOrder?.couponType === "CASHBACK"
+      // ==========================================
+      // COUPON NAME
+      // ==========================================
+      const couponName =
+        paymentOrder?.coupon?.code ||
+        paymentOrder?.couponCode ||
+        null;
+
+      // ==========================================
+      // DISCOUNT AMOUNT
+      //
+      // Only DISCOUNT coupon reduces
+      // the amount paid by the user.
+      // ==========================================
+      const discountAmount =
+        couponType === "DISCOUNT"
           ? Number(paymentOrder?.discount ?? 0)
           : 0;
 
       // ==========================================
-      // FINAL USER PAID AMOUNT
+      // CASHBACK AMOUNT
+      //
+      // CASHBACK does not reduce the
+      // amount initially paid by the user.
+      // ==========================================
+      const cashbackAmount =
+        couponType === "CASHBACK"
+          ? Number(paymentOrder?.discount ?? 0)
+          : 0;
+
+      // ==========================================
+      // FINAL PAID AMOUNT
       //
       // DISCOUNT:
-      // original amount - discount
+      // ₹5000 - ₹500 = ₹4500
       //
       // CASHBACK:
-      // user pays full amount
+      // User pays full ₹5000
+      // and receives ₹500 cashback separately.
       // ==========================================
       const finalPaidAmount =
-        paymentOrder?.couponType === "DISCOUNT"
-          ? originalAmount - discountAmount
+        couponType === "DISCOUNT"
+          ? Math.max(0, originalAmount - discountAmount)
           : originalAmount;
 
+      // ==========================================
+      // RETURN
+      // ==========================================
       return {
         id: booking.id,
 
         // Original service amount
         amount: originalAmount,
 
-        // Coupon information
-        couponName:
-          paymentOrder?.coupon?.code ||
-          paymentOrder?.couponCode ||
-          null,
+        // Coupon
+        couponName,
+        couponType,
 
-        couponType:
-          paymentOrder?.coupon?.type ||
-          paymentOrder?.couponType ||
-          null,
-
-        // Discount amount
+        // Discount
         discountAmount,
 
-        // Cashback amount
+        // Cashback
         cashbackAmount,
 
         // Actual amount paid by user
         finalPaidAmount,
 
+        // User
         userName: booking.user?.name || null,
 
         userMobile: booking.user?.mobile || null,
 
+        // Service
         serviceName: booking.service?.name || null,
 
+        // Booking
         bookingStatus: booking.bookingStatus,
 
         bookingDate: booking.createdAt
           ? booking.createdAt.toISOString()
           : null,
 
-        assignedTo:
-          booking.astrologer?.name || null,
+        // Astrologer
+        assignedTo: booking.astrologer?.name || null,
       };
     });
 
@@ -5550,61 +5587,56 @@ getAdminServiceBookingReport: async (
     );
   }
 },
-
   },
 
   // **********************************************START MUTATION**********************************
 
   Mutation: {
+    restoreAstrologer: async (_, { astrologerId }, context) => {
+      const { prisma } = context;
 
-restoreAstrologer: async (_, { astrologerId }, context) => {
-  const { prisma } = context;
+      await checkPermission(context, "astrologer-list.update");
 
-  await checkPermission(context, "astrologer-list.update");
+      try {
+        const existing = await prisma.astrologer.findUnique({
+          where: {
+            id: astrologerId,
+          },
+        });
 
-  try {
-    const existing = await prisma.astrologer.findUnique({
-      where: {
-        id: astrologerId,
-      },
-    });
+        if (!existing) {
+          throw new Error("Astrologer not found");
+        }
 
-    if (!existing) {
-      throw new Error("Astrologer not found");
-    }
+        if (!existing.isDeleted) {
+          throw new Error("Astrologer is already active");
+        }
 
-    if (!existing.isDeleted) {
-      throw new Error("Astrologer is already active");
-    }
+        await prisma.astrologer.update({
+          where: {
+            id: astrologerId,
+          },
+          data: {
+            // Restore astrologer
+            isDeleted: false,
+            status: true,
 
-    await prisma.astrologer.update({
-      where: {
-        id: astrologerId,
-      },
-      data: {
-        // Restore astrologer
-        isDeleted: false,
-        status: true,
+            // Make sure all activity states are reset correctly
+            isOnline: false,
+            isBusy: false,
+            isChatActive: false,
+            isCallActive: false,
+            isLiveActive: false,
+          },
+        });
 
-        // Make sure all activity states are reset correctly
-        isOnline: false,
-        isBusy: false,
-        isChatActive: false,
-        isCallActive: false,
-        isLiveActive: false,
-      },
-    });
+        return true;
+      } catch (error) {
+        console.error("restoreAstrologer error:", error);
 
-    return true;
-  } catch (error) {
-    console.error("restoreAstrologer error:", error);
-
-    throw new Error(
-      error.message || "Failed to restore astrologer"
-    );
-  }
-},
-
+        throw new Error(error.message || "Failed to restore astrologer");
+      }
+    },
 
     createRefundRequest: async (_, { input }, context) => {
       try {
@@ -7026,28 +7058,28 @@ restoreAstrologer: async (_, { astrologerId }, context) => {
 
     // ================= ADD ASTROLOGER =================
     addAstrologer: async (_, { data }, context) => {
-  const { prisma } = context;
+      const { prisma } = context;
 
-let application = null;
+      let application = null;
 
-if (data.applicationId) {
-  application = await prisma.astrologerApplication.findUnique({
-    where: {
-      id: data.applicationId,
-    },
-    include: {
-      kycDetail: true,
-    },
-  });
+      if (data.applicationId) {
+        application = await prisma.astrologerApplication.findUnique({
+          where: {
+            id: data.applicationId,
+          },
+          include: {
+            kycDetail: true,
+          },
+        });
 
-  if (!application) {
-    throw new Error("Astrologer application not found");
-  }
+        if (!application) {
+          throw new Error("Astrologer application not found");
+        }
 
-  if (application.astrologerId) {
-    throw new Error("Astrologer already created for this application");
-  }
-}
+        if (application.astrologerId) {
+          throw new Error("Astrologer already created for this application");
+        }
+      }
 
       try {
         await checkPermission(context, "add-astrologer.create");
@@ -7490,75 +7522,63 @@ if (data.applicationId) {
     },
 
     // ================= DELETE ASTROLOGER =================
-   
 
+    deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
+      try {
+        if (
+          !context.user ||
+          !["SUPER_ADMIN", "MANAGER"].includes(context.user.role?.name)
+        ) {
+          throw new Error("Not authorized");
+        }
 
+        console.log("DELETE ASTRO INPUT:", {
+          userId: context.user.id,
+          userName: context.user.name,
+          deleteRemark,
+          astrologerId,
+        });
 
-deleteAstrologer: async (_, { astrologerId, deleteRemark }, context) => {
-  try {
-    if (
-      !context.user ||
-      !["SUPER_ADMIN", "MANAGER"].includes(context.user.role?.name)
-    ) {
-      throw new Error("Not authorized");
-    }
+        const existing = await prisma.astrologer.findUnique({
+          where: {
+            id: astrologerId,
+          },
+        });
 
-    console.log("DELETE ASTRO INPUT:", {
-      userId: context.user.id,
-      userName: context.user.name,
-      deleteRemark,
-      astrologerId,
-    });
+        if (!existing) {
+          throw new Error("Astrologer not found");
+        }
 
-    const existing = await prisma.astrologer.findUnique({
-      where: {
-        id: astrologerId,
-      },
-    });
+        await prisma.astrologer.update({
+          where: {
+            id: astrologerId,
+          },
 
-    if (!existing) {
-      throw new Error("Astrologer not found");
-    }
+          data: {
+            // Existing delete logic
+            isDeleted: true,
+            status: false,
+            isOnline: false,
+            isBusy: false,
+            isChatActive: false,
+            isCallActive: false,
+            isLiveActive: false,
 
-    await prisma.astrologer.update({
-      where: {
-        id: astrologerId,
-      },
+            // Delete metadata
+            deletedAt: new Date(),
+            deletedById: context.user.id,
+            deletedByName: context.user.name,
+            deleteRemark: deleteRemark || null,
+          },
+        });
 
-      data: {
-        // Existing delete logic
-        isDeleted: true,
-        status: false,
-        isOnline: false,
-        isBusy: false,
-        isChatActive: false,
-        isCallActive: false,
-        isLiveActive: false,
+        return true;
+      } catch (error) {
+        console.error("deleteAstrologer error:", error);
 
-        // Delete metadata
-        deletedAt: new Date(),
-        deletedById: context.user.id,
-        deletedByName: context.user.name,
-        deleteRemark: deleteRemark || null,
-      },
-    });
-
-    return true;
-  } catch (error) {
-    console.error("deleteAstrologer error:", error);
-
-    throw new Error(
-      error.message || "Failed to delete astrologer"
-    );
-  }
-},
-
-
-
-
-
-
-
+        throw new Error(error.message || "Failed to delete astrologer");
+      }
+    },
 
     // ================= UPDATE USER =================
     updateUser: async (_, { userId, data }, context) => {
