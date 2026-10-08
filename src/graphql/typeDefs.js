@@ -2333,7 +2333,7 @@ type AdminServiceBookingReport {
   assignedTo: String
 
   # Original service amount
-  amount: Float!
+  amount: Float
 
   # Coupon information
   couponName: String
