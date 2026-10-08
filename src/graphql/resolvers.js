@@ -5314,7 +5314,7 @@ export const resolvers = {
       }
     },
 
-    getAdminServiceBookingReport: async (
+  getAdminServiceBookingReport: async (
   _,
   { page = 1, limit = 20, bookingStatus },
   context,
@@ -5415,20 +5415,42 @@ export const resolvers = {
             select: {
               id: true,
 
-              amount: true,
+              // Total original service/order amount
+              totalAmount: true,
 
-              originalAmount: true,
+              // Amount paid using wallet
+              walletAmount: true,
 
-              discount: true,
+              // Actual payable amount
+              payableAmount: true,
 
-              couponCode: true,
+              // Cashback amount
+              cashback: true,
 
-              couponType: true,
+              // Coupon ID
+              couponId: true,
 
+              // Payment status
+              status: true,
+
+              createdAt: true,
+
+              // ==========================================
+              // COUPON
+              // ==========================================
               coupon: {
                 select: {
                   code: true,
                   type: true,
+                },
+              },
+
+              // ==========================================
+              // COUPON REDEMPTION
+              // ==========================================
+              couponRedemption: {
+                select: {
+                  discount: true,
                 },
               },
             },
@@ -5456,11 +5478,13 @@ export const resolvers = {
 
       // ==========================================
       // ORIGINAL AMOUNT
+      //
+      // Prefer ServicePaymentOrder.totalAmount.
+      // Fallback to ServiceBooking.amount.
       // ==========================================
       const originalAmount = Number(
-        paymentOrder?.originalAmount ??
+        paymentOrder?.totalAmount ??
           booking.amount ??
-          paymentOrder?.amount ??
           0,
       );
 
@@ -5468,54 +5492,74 @@ export const resolvers = {
       // COUPON TYPE
       // ==========================================
       const couponType =
-        paymentOrder?.coupon?.type ||
-        paymentOrder?.couponType ||
-        null;
+        paymentOrder?.coupon?.type || null;
 
       // ==========================================
       // COUPON NAME
       // ==========================================
       const couponName =
-        paymentOrder?.coupon?.code ||
-        paymentOrder?.couponCode ||
-        null;
+        paymentOrder?.coupon?.code || null;
+
+      // ==========================================
+      // COUPON DISCOUNT
+      //
+      // Discount is stored in CouponRedemption.
+      // ==========================================
+      const couponDiscount = Number(
+        paymentOrder?.couponRedemption?.discount ?? 0,
+      );
 
       // ==========================================
       // DISCOUNT AMOUNT
       //
-      // Only DISCOUNT coupon reduces
-      // the amount paid by the user.
+      // Only DISCOUNT coupon is counted here.
       // ==========================================
       const discountAmount =
         couponType === "DISCOUNT"
-          ? Number(paymentOrder?.discount ?? 0)
+          ? couponDiscount
           : 0;
 
       // ==========================================
       // CASHBACK AMOUNT
       //
-      // CASHBACK does not reduce the
-      // amount initially paid by the user.
+      // Cashback is stored directly on
+      // ServicePaymentOrder.cashback.
       // ==========================================
       const cashbackAmount =
         couponType === "CASHBACK"
-          ? Number(paymentOrder?.discount ?? 0)
+          ? Number(paymentOrder?.cashback ?? 0)
           : 0;
 
       // ==========================================
       // FINAL PAID AMOUNT
       //
-      // DISCOUNT:
-      // ₹5000 - ₹500 = ₹4500
+      // payableAmount represents the actual
+      // amount payable after discount.
       //
-      // CASHBACK:
-      // User pays full ₹5000
-      // and receives ₹500 cashback separately.
+      // For DISCOUNT:
+      // payableAmount = original - discount
+      //
+      // For CASHBACK:
+      // user pays the normal amount and
+      // cashback is credited separately.
       // ==========================================
-      const finalPaidAmount =
-        couponType === "DISCOUNT"
-          ? Math.max(0, originalAmount - discountAmount)
-          : originalAmount;
+      let finalPaidAmount;
+
+      if (paymentOrder) {
+        if (couponType === "DISCOUNT") {
+          finalPaidAmount = Number(
+            paymentOrder.payableAmount ??
+              Math.max(
+                0,
+                originalAmount - discountAmount,
+              ),
+          );
+        } else {
+          finalPaidAmount = originalAmount;
+        }
+      } else {
+        finalPaidAmount = originalAmount;
+      }
 
       // ==========================================
       // RETURN
@@ -5523,11 +5567,12 @@ export const resolvers = {
       return {
         id: booking.id,
 
-        // Original service amount
+        // Original service/order amount
         amount: originalAmount,
 
-        // Coupon
+        // Coupon information
         couponName,
+
         couponType,
 
         // Discount
