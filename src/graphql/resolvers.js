@@ -5555,14 +5555,19 @@ export const resolvers = {
               ),
           );
         }
-        if (couponType === "CASHBACK") {
+        else if (couponType === "CASHBACK") {
           
           finalPaidAmount = Number(
             paymentOrder.payableAmount
               
           );
           console.log("CASHBACK",finalPaidAmount);
-        } 
+        } else{
+          finalPaidAmount = Number(
+            paymentOrder.payableAmount
+              
+          );
+        }
         
       } else {
         console.log("----------else originalAmount--------",originalAmount);
@@ -5640,6 +5645,7 @@ export const resolvers = {
     );
   }
 },
+
   },
 
   // **********************************************START MUTATION**********************************
