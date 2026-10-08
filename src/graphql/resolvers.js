@@ -5556,10 +5556,12 @@ export const resolvers = {
           );
         }
         if (couponType === "CASHBACK") {
+          
           finalPaidAmount = Number(
             paymentOrder.payableAmount
               
           );
+          console.log("CASHBACK",finalPaidAmount);
         } 
         
       } else {
