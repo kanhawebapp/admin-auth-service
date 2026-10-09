@@ -217,7 +217,7 @@ const typeDefs = gql`
 
     createdAt: DateTime
     updatedAt: DateTime
-}
+  }
 
   type Address {
     street: String!
@@ -257,7 +257,6 @@ const typeDefs = gql`
     role: Role!
   }
 
-
   type AdminAuthPayload {
     admin: Admin!
     accessToken: String!
@@ -285,8 +284,8 @@ const typeDefs = gql`
     endDate: String
     page: Int
     limit: Int
-      minBalance: Float
-  maxBalance: Float
+    minBalance: Float
+    maxBalance: Float
   }
 
   type UserList {
@@ -345,7 +344,7 @@ const typeDefs = gql`
     coins: Int!
     validityDays: Int!
     isActive: Boolean
-     hideAfterFirstRecharge: Boolean
+    hideAfterFirstRecharge: Boolean
   }
 
   type RechargePack {
@@ -370,7 +369,7 @@ const typeDefs = gql`
     talktime: Int
     validityDays: Int
     isActive: Boolean
-      hideAfterFirstRecharge: Boolean
+    hideAfterFirstRecharge: Boolean
   }
 
   #-----------END OF RECHARGE PACKS-----------------#
@@ -705,7 +704,7 @@ const typeDefs = gql`
     status: Boolean
     createdAt: String
     updatedAt: String
-      bannerType: BannerType
+    bannerType: BannerType
   }
 
   input CreateBannerInput {
@@ -716,12 +715,12 @@ const typeDefs = gql`
     bannerlink: String
     language: String
     imageUrl: String
-      bannerType: BannerType
+    bannerType: BannerType
   }
-enum BannerType {
-  DESKTOP
-  MOBILE
-}
+  enum BannerType {
+    DESKTOP
+    MOBILE
+  }
   input UpdateBannerInput {
     heading: String
     subheading: String
@@ -731,7 +730,7 @@ enum BannerType {
     language: String
     imageUrl: String
     status: Boolean
-      bannerType: BannerType
+    bannerType: BannerType
   }
 
   #-------------------- pricing --------------#
@@ -912,62 +911,62 @@ enum BannerType {
   }
   #-----------------------------END Wallet MANAGEMENT-----------------#
   #-----------------------START for astrologer walet-----------------#
-type AstrologerWallet {
-  id: ID!
-  astrologerId: ID!
+  type AstrologerWallet {
+    id: ID!
+    astrologerId: ID!
 
-  balanceCoins: Float
-  lockedCoins: Int
+    balanceCoins: Float
+    lockedCoins: Int
 
-  totalEarned: Int
-  totalWithdrawn: Int
+    totalEarned: Int
+    totalWithdrawn: Int
 
-  astrologer: Astrologer
+    astrologer: Astrologer
 
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-type Payment {
-  id: ID!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+  type Payment {
+    id: ID!
 
-  amount: Float
-  coins: Int
+    amount: Float
+    coins: Int
 
-  provider: String
-  status: String
+    provider: String
+    status: String
 
-  razorpayPaymentId: String
+    razorpayPaymentId: String
 
-  createdAt: DateTime
-}
- type AstrologerWalletTransaction {
-  id: ID!
+    createdAt: DateTime
+  }
+  type AstrologerWalletTransaction {
+    id: ID!
 
-  astrologerWalletId: ID
+    astrologerWalletId: ID
 
-  sessionId: ID
-  paymentId: ID
+    sessionId: ID
+    paymentId: ID
 
-  type: String!
-  coins: Int!
-  amount: Float
-  description: String
-  updatedBalance: Float
+    type: String!
+    coins: Int!
+    amount: Float
+    description: String
+    updatedBalance: Float
 
-  astrologerWallet: AstrologerWallet
+    astrologerWallet: AstrologerWallet
 
-  session: Session
-  payment: Payment
+    session: Session
+    payment: Payment
 
-  createdAt: DateTime!
-}
+    createdAt: DateTime!
+  }
 
   type AstrologerWalletTransactionList {
     data: [AstrologerWalletTransaction!]!
     totalCount: Int!
-      totalPages: Int
+    totalPages: Int
   }
-    
+
   #------------------End of astrologer wallet-----------------#
   #------START FOR ALL WALLET TRANSACTIONS-----------------#
 
@@ -975,32 +974,32 @@ type Payment {
     USER
     ASTROLOGER
   }
-type WalletTransaction {
-  id: ID!
+  type WalletTransaction {
+    id: ID!
 
-  userWalletId: ID
-  astrologerWalletId: ID
+    userWalletId: ID
+    astrologerWalletId: ID
 
-  rechargePack: RechargePack
-  rechargePackId: ID
+    rechargePack: RechargePack
+    rechargePackId: ID
 
-  sessionId: ID
-  paymentId: ID
+    sessionId: ID
+    paymentId: ID
 
-  updatedBalance: Float
+    updatedBalance: Float
 
-  type: String!
-  coins: Int!
-  amount: Float
-  description: String
+    type: String!
+    coins: Int!
+    amount: Float
+    description: String
 
-  userWallet: UserWallet
-  astrologerWallet: AstrologerWallet
+    userWallet: UserWallet
+    astrologerWallet: AstrologerWallet
 
-  source: WalletSource
+    source: WalletSource
 
-  createdAt: DateTime!
-}
+    createdAt: DateTime!
+  }
   #---END FOR ALL WALLET TRANSACTIONS-----------------#
   #-----------------------------START of astrologer earnings-----------------#
   input AstrologerEarningSearchInput {
@@ -1026,7 +1025,7 @@ type WalletTransaction {
     balanceCoins: Float
     totalEarned: Float
     totalWithdrawn: Float
-updatedBalance: Float
+    updatedBalance: Float
     totalSessionEarnings: Float
     monthlyEarnings: Float
     todayEarnings: Float
@@ -1085,7 +1084,7 @@ updatedBalance: Float
     by: String
     ratePerMin: Float
     durationSec: Int
- hasRemedy: Boolean!
+    hasRemedy: Boolean!
     coinsDeducted: Float
     coinsEarned: Float
     commission: Float
@@ -1212,7 +1211,7 @@ updatedBalance: Float
   input UpdateAstrologerInput {
     astroname: String
     displayName: String
-  applicationId: String
+    applicationId: String
     profilePic: String
 
     gender: Gender
@@ -1297,10 +1296,10 @@ updatedBalance: Float
     page: Int
     limit: Int
   }
-enum SessionType {
-  CHAT
-  CALL
-}
+  enum SessionType {
+    CHAT
+    CALL
+  }
   type FraudFlagList {
     data: [FraudFlag!]!
 
@@ -1365,96 +1364,94 @@ enum SessionType {
     PAID
     FAILED
   }
-enum PaymentStatus {
+  enum PaymentStatus {
     SUCCESS
     FAILED
     PENDING
-}
-  input PaymentReportSearchInput{
-    query:String
+  }
+  input PaymentReportSearchInput {
+    query: String
 
-    status:PaymentStatus
-    platform:String
-    country:String
+    status: PaymentStatus
+    platform: String
+    country: String
 
-    filterType:SessionFilterType
+    filterType: SessionFilterType
 
-    startDate:String
-    endDate:String
+    startDate: String
+    endDate: String
 
-    minAmount:Float
-    maxAmount:Float
+    minAmount: Float
+    maxAmount: Float
 
-    page:Int
-    limit:Int
-}
-type PaymentReport {
-  id: ID!
+    page: Int
+    limit: Int
+  }
+  type PaymentReport {
+    id: ID!
 
-  userId: ID!
-  userName: String
-  mobile: String
+    userId: ID!
+    userName: String
+    mobile: String
 
-  rechargePackId: ID
-  rechargePackName: String
+    rechargePackId: ID
+    rechargePackName: String
 
-  invoiceNo: String
+    invoiceNo: String
 
-  amount: Float
-  coins: Int
+    amount: Float
+    coins: Int
 
-  taxableAmount: Float
+    taxableAmount: Float
 
-  gstRate: Float
-  cgst: Float
-  sgst: Float
-  igst: Float
+    gstRate: Float
+    cgst: Float
+    sgst: Float
+    igst: Float
 
-  totalTax: Float
-  totalAmount: Float
- pgChargeRate: Float
-  pgCharge: Float
-  pgIgst: Float
-  pgTotal: Float
-  receivableAmount: Float
-  country: String
-  state: String
-  city: String
+    totalTax: Float
+    totalAmount: Float
+    pgChargeRate: Float
+    pgCharge: Float
+    pgIgst: Float
+    pgTotal: Float
+    receivableAmount: Float
+    country: String
+    state: String
+    city: String
 
-  platform: String
+    platform: String
 
+    razorpayOrderId: String
+    razorpayPaymentId: String
 
-  razorpayOrderId: String
-  razorpayPaymentId: String
+    status: PaymentStatus
 
-  status: PaymentStatus
+    createdAt: DateTime
+  }
 
-  createdAt: DateTime
-}
+  type PaymentReportList {
+    data: [PaymentReport!]!
 
- type PaymentReportList {
+    totalCount: Int!
+    currentPage: Int!
+    totalPages: Int!
 
-  data: [PaymentReport!]!
+    totalAmount: Float!
+    totalCoins: Int!
 
-  totalCount: Int!
-  currentPage: Int!
-  totalPages: Int!
+    paidAmount: Float!
+    failedAmount: Float!
 
-  totalAmount: Float!
-  totalCoins: Int!
+    paidCount: Int!
+    failedCount: Int!
 
-  paidAmount: Float!
-  failedAmount: Float!
-
-  paidCount: Int!
-  failedCount: Int!
-
-  totalTax: Float!
-  totalGST: Float!
-totalPGCharge:Float!
-  totalCGST: Float!
-  totalSGST: Float!
-}
+    totalTax: Float!
+    totalGST: Float!
+    totalPGCharge: Float!
+    totalCGST: Float!
+    totalSGST: Float!
+  }
 
   #------About pagge ___________________#
   enum CmsStatus {
@@ -1761,10 +1758,10 @@ totalPGCharge:Float!
     languages: [String!]!
     skills: [String!]!
     problems: [String!]!
-isEligibleChat: Boolean!
-isEligibleCall: Boolean!
-isEligibleVideo: Boolean!
-isEligibleAudio: Boolean!
+    isEligibleChat: Boolean!
+    isEligibleCall: Boolean!
+    isEligibleVideo: Boolean!
+    isEligibleAudio: Boolean!
     pricing: [AstrologerPricing!]!
 
     tags: String
@@ -1927,25 +1924,25 @@ isEligibleAudio: Boolean!
     cancelled: Int!
     failed: Int!
   }
-type Session {
-  id: ID!
-  type: String
-  status: String
+  type Session {
+    id: ID!
+    type: String
+    status: String
 
-  ratePerMin: Int
-  durationSec: Int
+    ratePerMin: Int
+    durationSec: Int
 
-  coinsDeducted: Float
-  coinsEarned: Float
-  commission: Float
+    coinsDeducted: Float
+    coinsEarned: Float
+    commission: Float
 
-  source: String
-  roomId: String
+    source: String
+    roomId: String
 
-  startedAt: DateTime
-  endedAt: DateTime
-  createdAt: DateTime
-}
+    startedAt: DateTime
+    endedAt: DateTime
+    createdAt: DateTime
+  }
   type AstrologerDashboardStats {
     totalChats: Int!
     statusSummary: SessionStatusSummary!
@@ -1985,18 +1982,18 @@ type Session {
   type AstrologerSessionHistory {
     sessionId: ID!
     userId: ID!
-roomId: String
+    roomId: String
     userName: String
     astroName: String
     by: String
     ratePerMin: Int
     durationSec: Int
     type: SessionType
-   astrologerCommission: Float
-  dhwaniCommission: Float
-hasRemedy: Boolean!
-  coinsDeducted: Float
-astrologerId: String
+    astrologerCommission: Float
+    dhwaniCommission: Float
+    hasRemedy: Boolean!
+    coinsDeducted: Float
+    astrologerId: String
     status: SessionStatus
 
     startedAt: String
@@ -2041,7 +2038,7 @@ astrologerId: String
     totalAstrologers: Int!
     totalUsers: Int!
     totalStaff: Int!
-  totalRechargeAmount: Float
+    totalRechargeAmount: Float
     totalCalls: Int!
     totalChats: Int!
 
@@ -2111,269 +2108,339 @@ astrologerId: String
     createdAt: String!
   }
 
-type WaitingQueueUser {
-  userId: ID!
-  name: String
-  mobile: String
-  countryCode: String
-  
-  roomId: String!
-  maximumTime: Int
-  source: String
-  type: String
-}
+  type WaitingQueueUser {
+    userId: ID!
+    name: String
+    mobile: String
+    countryCode: String
 
-type AstrologerQueue {
-  astrologerId: ID!
-  astrologerName: String!
-  astrologerProfilePic: String
-  isOnline: Boolean
-  isBusy: Boolean
+    roomId: String!
+    maximumTime: Int
+    source: String
+    type: String
+  }
 
-  waitingCount: Int!
+  type AstrologerQueue {
+    astrologerId: ID!
+    astrologerName: String!
+    astrologerProfilePic: String
+    isOnline: Boolean
+    isBusy: Boolean
 
-  waitingUsers: [WaitingQueueUser!]!
-}
+    waitingCount: Int!
+
+    waitingUsers: [WaitingQueueUser!]!
+  }
   type Skill {
-  id: ID!
+    id: ID!
 
-  name: String!
+    name: String!
 
-  slug: String!
+    slug: String!
 
-  sortOrder: Int!
+    sortOrder: Int!
 
-  isActive: Boolean!
+    isActive: Boolean!
 
-  createdAt: String
-  updatedAt: String
-}
+    createdAt: String
+    updatedAt: String
+  }
 
-input CreateSkillInput {
-  name: String!
-  slug: String
-  sortOrder: Int
-  isActive: Boolean
-}
+  input CreateSkillInput {
+    name: String!
+    slug: String
+    sortOrder: Int
+    isActive: Boolean
+  }
 
-input UpdateSkillInput {
-  name: String
-  slug: String
-  sortOrder: Int
-  isActive: Boolean
-}
+  input UpdateSkillInput {
+    name: String
+    slug: String
+    sortOrder: Int
+    isActive: Boolean
+  }
   type Problem {
-  id: ID!
+    id: ID!
 
-  name: String!
+    name: String!
 
-  slug: String!
+    slug: String!
 
-  sortOrder: Int!
+    sortOrder: Int!
 
-  isActive: Boolean!
+    isActive: Boolean!
 
-  createdAt: String
-  updatedAt: String
-}
+    createdAt: String
+    updatedAt: String
+  }
 
-input CreateProblemInput {
-  name: String!
-  slug: String
-  sortOrder: Int
-  isActive: Boolean
-}
+  input CreateProblemInput {
+    name: String!
+    slug: String
+    sortOrder: Int
+    isActive: Boolean
+  }
 
-input UpdateProblemInput {
-  name: String
-  slug: String
-  sortOrder: Int
-  isActive: Boolean
-}
+  input UpdateProblemInput {
+    name: String
+    slug: String
+    sortOrder: Int
+    isActive: Boolean
+  }
   #-----End code for send gift history-----------------#
   #-------------START CODE FOR ASTROLOGER PAYOUT--------
-type PayoutReport {
-  astrologerId: String!
-  astrologerName: String!
-  profilePic: String
+  type PayoutReport {
+    astrologerId: String!
+    astrologerName: String!
+    profilePic: String
 
-  accountHolderName: String
-  accountNumber: String
-  bankName: String
-  ifsc: String
-  panNumber: String
-  state: String
+    accountHolderName: String
+    accountNumber: String
+    bankName: String
+    ifsc: String
+    panNumber: String
+    state: String
 
-  totalSessions: Int!
+    totalSessions: Int!
 
-  totalRevenue: Float!
+    totalRevenue: Float!
 
-  commissionPercent: Float!
-  commission: Float!
+    commissionPercent: Float!
+    commission: Float!
 
-  earning: Float!
+    earning: Float!
 
-  pgChargeRate: Float!
-  pgCharge: Float!
+    pgChargeRate: Float!
+    pgCharge: Float!
 
-  gstRate: Float!
-  cgst: Float!
-  sgst: Float!
-  igst: Float!
+    gstRate: Float!
+    cgst: Float!
+    sgst: Float!
+    igst: Float!
 
-  pgTotal: Float!
+    pgTotal: Float!
 
-  grossAmount: Float!
+    grossAmount: Float!
 
-  tdsPercent: Float!
-  tdsAmount: Float!
-totalPaid: Float
-  lastPaidAmount: Float!
+    tdsPercent: Float!
+    tdsAmount: Float!
+    totalPaid: Float
+    lastPaidAmount: Float!
 
-  payableAmount: Float!
-}
+    payableAmount: Float!
+  }
 
-type AstrologerPayoutHistory {
-  id: ID!
-  astrologerId: ID!
-  astrologerName: String
-  remark: String
-  earning: Float
-  pgCharge: Float
-  subTotal: Float
-  tdsAmount: Float
-  paidAmount: Float
-  startDate: String
-  endDate: String
-  paidOn: String
-}
-input RefundRequestSearchInput {
-  page: Int
-  limit: Int
+  type AstrologerPayoutHistory {
+    id: ID!
+    astrologerId: ID!
+    astrologerName: String
+    remark: String
+    earning: Float
+    pgCharge: Float
+    subTotal: Float
+    tdsAmount: Float
+    paidAmount: Float
+    startDate: String
+    endDate: String
+    paidOn: String
+  }
+  input RefundRequestSearchInput {
+    page: Int
+    limit: Int
 
-  status: RefundRequestStatus
+    status: RefundRequestStatus
 
-  search: String
-}
-input CreateRefundRequestInput {
-  sessionId: ID!
-  refundDuration: Int!
-  refundReason: String!
-  refundType: String
-  mode: String
-}
+    search: String
+  }
+  input CreateRefundRequestInput {
+    sessionId: ID!
+    refundDuration: Int!
+    refundReason: String!
+    refundType: String
+    mode: String
+  }
   enum RefundRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
+    PENDING
+    APPROVED
+    REJECTED
+  }
   type RefundRequest {
-  id: ID!
+    id: ID!
 
-  sessionId: ID!
+    sessionId: ID!
 
-  userId: ID!
-  userName: String
-  userMobile: String
+    userId: ID!
+    userName: String
+    userMobile: String
 
-  astrologerId: ID!
-  astrologerName: String
+    astrologerId: ID!
+    astrologerName: String
 
-  transactionId: String
-  orderId: String
+    transactionId: String
+    orderId: String
 
-  sessionDuration: Int!
-  ratePerMin: Int!
-sessionDate: DateTime!
-  refundDuration: Int!
-  refundAmount: Float!
+    sessionDuration: Int!
+    ratePerMin: Int!
+    sessionDate: DateTime!
+    refundDuration: Int!
+    refundAmount: Float!
 
-  refundType: String
-  mode: String
-  refundReason: String!
+    refundType: String
+    mode: String
+    refundReason: String!
 
-  requestedByStaffId: ID!
-  requestedByStaffName: String!
+    requestedByStaffId: ID!
+    requestedByStaffName: String!
 
-  status: RefundRequestStatus!
+    status: RefundRequestStatus!
 
-  approvedByStaffId: ID
-  approvedByStaffName: String
-  approvedAt: DateTime
+    approvedByStaffId: ID
+    approvedByStaffName: String
+    approvedAt: DateTime
 
-  rejectedByStaffId: ID
-  rejectedByStaffName: String
-  rejectedAt: DateTime
+    rejectedByStaffId: ID
+    rejectedByStaffName: String
+    rejectedAt: DateTime
 
-  rejectionReason: String
+    rejectionReason: String
 
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
   type RefundRequestList {
-  data: [RefundRequest!]!
+    data: [RefundRequest!]!
 
-  totalCount: Int!
-  currentPage: Int!
-  totalPages: Int!
-}
+    totalCount: Int!
+    currentPage: Int!
+    totalPages: Int!
+  }
 
   #-------------END CODE FOR ASTROLOGER PAYOUT--------
 
   #---------GET BOOKED SERVICE-----------
-type AdminServiceBookingReport {
-  id: ID!
+  type AdminServiceBookingReport {
+    id: ID!
 
-  userName: String
-  userMobile: String
-  serviceName: String
+    userName: String
+    userMobile: String
+    serviceName: String
 
-  bookingStatus: String!
-  bookingDate: String!
-  assignedTo: String
+    bookingStatus: String!
+    bookingDate: String!
+    assignedTo: String
 
-  # Original service amount
-  amount: Float
+    # Original service amount
+    amount: Float
 
-  # Coupon information
-  couponName: String
-  couponType: String
+    # Coupon information
+    couponName: String
+    couponType: String
 
-  # Coupon amounts
-  discountAmount: Float!
-  cashbackAmount: Float!
+    # Coupon amounts
+    discountAmount: Float!
+    cashbackAmount: Float!
 
-  # Actual amount paid by user
-  finalPaidAmount: Float!
-}
+    # Actual amount paid by user
+    finalPaidAmount: Float!
+  }
 
-type AdminServiceBookingReportResponse {
-  success: Boolean!
-  total: Int!
-  currentPage: Int!
-  totalPages: Int!
-  limit: Int!
-  data: [AdminServiceBookingReport!]!
-}
+  type AdminServiceBookingReportResponse {
+    success: Boolean!
+    total: Int!
+    currentPage: Int!
+    totalPages: Int!
+    limit: Int!
+    data: [AdminServiceBookingReport!]!
+  }
+
+  #Puja servicess
+  enum PujaReviewStatus {
+    PENDING
+    APPROVED
+    REJECTED
+  }
+
+  type PujaMantraOption {
+    id: ID!
+    name: String!
+    pujaId: ID!
+    createdAt: String!
+  }
+
+  type PujaFAQ {
+    id: ID!
+    question: String!
+    answer: String!
+    pujaId: ID!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type PujaReview {
+    id: ID!
+    pujaId: ID!
+    userId: ID
+    userName: String!
+    rating: Int!
+    comment: String!
+    status: PujaReviewStatus!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input PujaFAQInput {
+    question: String!
+    answer: String!
+  }
+
+  type PujaService {
+    id: ID!
+    title: String!
+    slug: String!
+    image: String!
+    category: String
+
+    shortDescription: String
+    description: String
+    benefits: String
+    howToPerform: String
+    packaging: String
+
+    price: Float!
+    mrp: Float
+    discount: Float
+
+    customersCount: Int!
+    rating: Float!
+
+    mantraOptions: [PujaMantraOption!]!
+    faqs: [PujaFAQ!]!
+    reviews: [PujaReview!]!
+
+    createdAt: String!
+    updatedAt: String!
+  }
 
   type Query {
-     getRefundRequests(
-    searchInput: RefundRequestSearchInput
-  ): RefundRequestList!
-  getAstrologerPayoutHistory(astrologerId: ID!): [AstrologerPayoutHistory]
+    # puja services
+    pujaServices: [PujaService!]!
+
+    pujaService(id: ID, slug: String): PujaService
+
+    pujaReviews(pujaId: ID!): [PujaReview!]!
+
+    getRefundRequests(searchInput: RefundRequestSearchInput): RefundRequestList!
+    getAstrologerPayoutHistory(astrologerId: ID!): [AstrologerPayoutHistory]
     getSkills: [Skill!]!
 
-  getSkill(id: ID!): Skill
+    getSkill(id: ID!): Skill
 
-  getProblems: [Problem!]!
+    getProblems: [Problem!]!
 
-  getProblem(id: ID!): Problem
-  getAstrologerWaitingUsers(
-    astrologerId: ID!
-  ): AstrologerQueue!
+    getProblem(id: ID!): Problem
+    getAstrologerWaitingUsers(astrologerId: ID!): AstrologerQueue!
 
-  
-  getAllWaitingQueues: [AstrologerQueue!]!
+    getAllWaitingQueues: [AstrologerQueue!]!
     getCallRecording(sessionId: ID!): CallRecording
     getSessionRemedies(sessionId: String!): [SessionRemedy!]!
     getAstrologerGiftHistory(
@@ -2482,7 +2549,7 @@ type AdminServiceBookingReportResponse {
       type: String
       contactNo: String
       amount: Float
-       astrologerId: ID
+      astrologerId: ID
       filterType: String
       startDate: String
       endDate: String
@@ -2589,11 +2656,11 @@ type AdminServiceBookingReportResponse {
     exportAstrologers(query: String): [Astrologer]
     payoutReport(fromDate: String!, toDate: String!): [PayoutReport!]!
 
-   getAdminServiceBookingReport(
-    page: Int
-    limit: Int
-    bookingStatus: String
-  ): AdminServiceBookingReportResponse!
+    getAdminServiceBookingReport(
+      page: Int
+      limit: Int
+      bookingStatus: String
+    ): AdminServiceBookingReportResponse!
   }
 
   type Mutation {
@@ -2694,13 +2761,7 @@ type AdminServiceBookingReportResponse {
       data: UpdateAstrologerInput!
     ): Astrologer!
 
-   
-deleteAstrologer(
-  astrologerId: ID!
-  deleteRemark: String
-): Boolean!
-
-
+    deleteAstrologer(astrologerId: ID!, deleteRemark: String): Boolean!
 
     rejectAstrologer(
       astrologerId: ID!
@@ -2878,18 +2939,22 @@ deleteAstrologer(
     toggleReviewFlag(reviewId: ID!, isFlagged: Boolean!): ToggleReviewResponse!
     updateCoupon(id: ID!, input: UpdateCouponInput!): Coupon!
 
-  updateReviewComment(
-  reviewId: ID!
-  comment: String
-  rating: Int
-): UserReview!
+    updateReviewComment(
+      reviewId: ID!
+      comment: String
+      rating: Int
+    ): UserReview!
 
     updateGiftStatus(id: ID!, status: String!): Gift!
     saveServiceAstrologers(
       serviceId: ID!
       astrologers: [ServiceAstrologerInput!]!
     ): Boolean!
-    updateUserStatus(userId: ID!, isActive: Boolean!,isDeleted: Boolean!): User!
+    updateUserStatus(
+      userId: ID!
+      isActive: Boolean!
+      isDeleted: Boolean!
+    ): User!
     manageAstrologerWallet(
       astrologerId: ID!
       amount: Float!
@@ -2903,62 +2968,86 @@ deleteAstrologer(
       type: TransactionType!
     ): WalletResponse!
     endSessionByAdmin(sessionId: ID!): String!
-      createSkill(
-    input: CreateSkillInput!
-  ): Skill!
+    createSkill(input: CreateSkillInput!): Skill!
 
-  updateSkill(
-    id: ID!
-    input: UpdateSkillInput!
-  ): Skill!
+    updateSkill(id: ID!, input: UpdateSkillInput!): Skill!
 
-  deleteSkill(
-    id: ID!
-  ): Boolean!
+    deleteSkill(id: ID!): Boolean!
 
-  updateSkillStatus(
-    id: ID!
-    status: Boolean!
-  ): Skill!
+    updateSkillStatus(id: ID!, status: Boolean!): Skill!
 
+    createProblem(input: CreateProblemInput!): Problem!
 
+    updateProblem(id: ID!, input: UpdateProblemInput!): Problem!
 
+    deleteProblem(id: ID!): Boolean!
 
-  createProblem(
-    input: CreateProblemInput!
-  ): Problem!
+    updateProblemStatus(id: ID!, status: Boolean!): Problem!
+    exportPayoutReport(
+      fromDate: String!
+      toDate: String!
+      remark: String
+    ): [PayoutReport!]!
+    createRefundRequest(input: CreateRefundRequestInput!): RefundRequest!
 
-  updateProblem(
-    id: ID!
-    input: UpdateProblemInput!
-  ): Problem!
+    approveRefundRequest(id: ID!): RefundRequest!
 
-  deleteProblem(
-    id: ID!
-  ): Boolean!
+    rejectRefundRequest(id: ID!, reason: String!): RefundRequest!
+    restoreAstrologer(astrologerId: ID!): Boolean
 
-  updateProblemStatus(
-    id: ID!
-    status: Boolean!
-  ): Problem!
-   exportPayoutReport(
-    fromDate: String!
-    toDate: String!
-     remark: String
-  ): [PayoutReport!]!
-   createRefundRequest(
-    input: CreateRefundRequestInput!
-  ): RefundRequest!
+    #puja services
+    createPujaService(
+      title: String!
+      slug: String!
+      image: String!
+      category: String
 
-  approveRefundRequest(
-    id: ID!
-  ): RefundRequest!
+      shortDescription: String
+      description: String
+      benefits: String
+      howToPerform: String
+      packaging: String
 
-  rejectRefundRequest(
-    id: ID!
-    reason: String!
-  ): RefundRequest!
-  restoreAstrologer(astrologerId: ID!): Boolean
+      price: Float!
+      mrp: Float
+      discount: Float
+      customersCount: Int
+      rating: Float
+
+      mantraOptions: [String!]
+      faqs: [PujaFAQInput!]
+    ): PujaService!
+
+    updatePujaService(
+      id: ID!
+      title: String!
+      slug: String!
+      image: String!
+      category: String
+
+      shortDescription: String
+      description: String
+      benefits: String
+      howToPerform: String
+      packaging: String
+
+      price: Float!
+      mrp: Float
+      discount: Float
+      customersCount: Int
+      rating: Float
+
+      mantraOptions: [String!]
+      faqs: [PujaFAQInput!]
+    ): PujaService!
+
+    deletePujaService(id: ID!): Boolean!
+
+    createPujaReview(pujaId: ID!, rating: Int!, comment: String!): PujaReview!
+
+    updatePujaReviewStatus(id: ID!, status: PujaReviewStatus!): PujaReview!
+
+    deletePujaReview(id: ID!): Boolean!
   }
 `;
 
