@@ -1852,8 +1852,10 @@ sessionDate DateTime
 }
 
 //-----------------puja tables-------------------
+//-----------------puja tables-------------------
+
 model PujaService {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  id              String   @id @default(uuid())
 
   // Basic Information
   title           String
@@ -1863,10 +1865,10 @@ model PujaService {
 
   // Description
   shortDescription String?
-  description      String?
-  benefits         String?
-  howToPerform     String?
-  packaging        String?
+  description      String?  @db.Text
+  benefits         String?  @db.Text
+  howToPerform     String?  @db.Text
+  packaging        String?  @db.Text
 
   // Pricing
   price            Float
@@ -1889,74 +1891,52 @@ model PujaService {
   @@index([createdAt])
 }
 
-
 model PujaMantraOption {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id        String      @id @default(uuid())
+  name      String
 
-  name        String
+  pujaId    String
+  puja      PujaService @relation(fields: [pujaId], references: [id], onDelete: Cascade)
 
-  pujaId      String      @db.ObjectId
-  puja        PujaService @relation(
-    fields: [pujaId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  createdAt   DateTime    @default(now())
+  createdAt DateTime    @default(now())
 
   @@index([pujaId])
 }
-
 
 model PujaFAQ {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id        String      @id @default(uuid())
+  question  String
+  answer    String      @db.Text
 
-  question    String
-  answer      String
+  pujaId    String
+  puja      PujaService @relation(fields: [pujaId], references: [id], onDelete: Cascade)
 
-  pujaId      String      @db.ObjectId
-  puja        PujaService @relation(
-    fields: [pujaId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   @@index([pujaId])
 }
 
-
 model PujaReview {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id        String           @id @default(uuid())
 
-  pujaId      String      @db.ObjectId
-  puja        PujaService @relation(
-    fields: [pujaId],
-    references: [id],
-    onDelete: Cascade
-  )
+  pujaId    String
+  puja      PujaService      @relation(fields: [pujaId], references: [id], onDelete: Cascade)
 
-  // Existing logged-in user
-  userId      String?     @db.ObjectId
+  userId    String?
+  userName  String
 
-  userName    String
+  rating    Int
+  comment   String           @db.Text
+  status    PujaReviewStatus @default(PENDING)
 
-  rating      Int
-  comment     String
-
-  // Useful for admin moderation
-  status      PujaReviewStatus @default(PENDING)
-
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([pujaId])
   @@index([userId])
   @@index([status])
 }
-
 
 enum PujaReviewStatus {
   PENDING
