@@ -1605,6 +1605,39 @@ enum LiveStatus {
   ENDED
 }
 
+model LiveGift {
+  id        String   @id @default(uuid())
+  name      String
+  icon      String
+  price     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions LiveGiftTransaction[]
+}
+
+model LiveGiftTransaction {
+  id          String   @id @default(uuid())
+
+  streamId    String
+  senderId    String
+  astrologerId String
+  giftId      String
+
+  quantity    Int      @default(1)
+  totalCoins  Int
+
+  status      String   @default("SUCCESS")
+  createdAt   DateTime @default(now())
+
+  gift        LiveGift @relation(fields: [giftId], references: [id])
+
+  @@index([streamId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([astrologerId, createdAt])
+}
+
 
 
 model CallRecording {
