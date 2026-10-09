@@ -210,10 +210,128 @@ const generateCRUDPermissions = async (module, prismaInstance) => {
   }
 };
 
+const pujaInclude = {
+  mantraOptions: {
+    orderBy: { createdAt: "asc" },
+  },
+  faqs: {
+    orderBy: { createdAt: "asc" },
+  },
+  reviews: {
+    orderBy: { createdAt: "desc" },
+  },
+};
+
+const optionalText = (value) => (value === "" ? null : value);
+
+const cleanMantras = (items = []) =>
+  items.map((name) => name.trim()).filter(Boolean);
+
+const cleanFAQs = (items = []) =>
+  items
+    .filter((faq) => faq.question?.trim() && faq.answer?.trim())
+    .map((faq) => ({
+      question: faq.question.trim(),
+      answer: faq.answer.trim(),
+    }));
+
+function validatePrice(price, mrp, discount) {
+  if (!Number.isFinite(price) || price < 0) {
+    throw new GraphQLError("Price must be a valid non-negative number.");
+  }
+
+  if (mrp != null && (!Number.isFinite(mrp) || mrp < 0)) {
+    throw new GraphQLError("MRP must be a valid non-negative number.");
+  }
+
+  if (mrp != null && mrp < price) {
+    throw new GraphQLError("MRP cannot be less than the selling price.");
+  }
+
+  if (
+    discount != null &&
+    (!Number.isFinite(discount) || discount < 0 || discount > 100)
+  ) {
+    throw new GraphQLError("Discount must be between 0 and 100.");
+  }
+}
+
+async function recalculatePujaRating(prisma, pujaId) {
+  const result = await prisma.pujaReview.aggregate({
+    where: {
+      pujaId,
+      status: "APPROVED",
+    },
+    _avg: {
+      rating: true,
+    },
+  });
+
+  await prisma.pujaService.update({
+    where: { id: pujaId },
+    data: {
+      rating: result._avg.rating ?? 0,
+    },
+  });
+}
+
+function handlePrismaError(error) {
+  if (error?.code === "P2002") {
+    throw new GraphQLError("A Puja Service with this slug already exists.", {
+      extensions: { code: "BAD_USER_INPUT" },
+    });
+  }
+
+  if (error?.code === "P2025") {
+    throw new GraphQLError("The requested record was not found.", {
+      extensions: { code: "NOT_FOUND" },
+    });
+  }
+
+  throw error;
+}
+
 export const resolvers = {
   JSON: GraphQLJSON,
   Upload: GraphQLUpload,
   Query: {
+    pujaServices: async (_, __, context) => {
+      const prisma = context.prisma;
+
+      return prisma.pujaService.findMany({
+        include: pujaInclude,
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    },
+
+    // Find by ID or slug
+    pujaService: async (_, { id, slug }, context) => {
+      const prisma = context.prisma;
+
+      if (!id && !slug) {
+        throw new GraphQLError("Provide either a Puja ID or slug.");
+      }
+
+      if (id && slug) {
+        throw new GraphQLError("Provide either ID or slug, not both.");
+      }
+
+      return prisma.pujaService.findUnique({
+        where: id ? { id } : { slug },
+        include: pujaInclude,
+      });
+    },
+
+    // Fetch reviews for a specific Puja
+    pujaReviews: async (_, { pujaId }, context) => {
+      return context.prisma.pujaReview.findMany({
+        where: { pujaId },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
     getAllWaitingQueues: async () => {
       try {
         const astrologers = await prisma.astrologer.findMany({
@@ -5314,338 +5432,310 @@ export const resolvers = {
       }
     },
 
-  getAdminServiceBookingReport: async (
-  _,
-  { page = 1, limit = 20, bookingStatus },
-  context,
-) => {
-  try {
-    // ==========================================
-    // SUPER_ADMIN ONLY
-    // ==========================================
-    if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
-      throw new Error(
-        "Only SUPER_ADMIN can view service booking reports",
-      );
-    }
+    getAdminServiceBookingReport: async (
+      _,
+      { page = 1, limit = 20, bookingStatus },
+      context,
+    ) => {
+      try {
+        // ==========================================
+        // SUPER_ADMIN ONLY
+        // ==========================================
+        if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
+          throw new Error("Only SUPER_ADMIN can view service booking reports");
+        }
 
-    // ==========================================
-    // PAGINATION
-    // ==========================================
-    const currentPage = Math.max(1, Number(page) || 1);
+        // ==========================================
+        // PAGINATION
+        // ==========================================
+        const currentPage = Math.max(1, Number(page) || 1);
 
-    const take = Math.min(
-      Math.max(1, Number(limit) || 20),
-      100,
-    );
+        const take = Math.min(Math.max(1, Number(limit) || 20), 100);
 
-    const skip = (currentPage - 1) * take;
+        const skip = (currentPage - 1) * take;
 
-    // ==========================================
-    // FILTER
-    // ==========================================
-    const where = {};
+        // ==========================================
+        // FILTER
+        // ==========================================
+        const where = {};
 
-    if (
-      bookingStatus !== null &&
-      bookingStatus !== undefined &&
-      bookingStatus !== ""
-    ) {
-      where.bookingStatus = bookingStatus;
-    }
+        if (
+          bookingStatus !== null &&
+          bookingStatus !== undefined &&
+          bookingStatus !== ""
+        ) {
+          where.bookingStatus = bookingStatus;
+        }
 
-    // ==========================================
-    // FETCH BOOKINGS + TOTAL
-    // ==========================================
-    const [bookings, total] = await Promise.all([
-      prisma.serviceBooking.findMany({
-        where,
+        // ==========================================
+        // FETCH BOOKINGS + TOTAL
+        // ==========================================
+        const [bookings, total] = await Promise.all([
+          prisma.serviceBooking.findMany({
+            where,
 
-        skip,
-        take,
-
-        orderBy: {
-          createdAt: "desc",
-        },
-
-        select: {
-          id: true,
-
-          bookingStatus: true,
-
-          createdAt: true,
-
-          // ==========================================
-          // ORIGINAL SERVICE AMOUNT
-          // ==========================================
-          amount: true,
-
-          // ==========================================
-          // USER
-          // ==========================================
-          user: {
-            select: {
-              name: true,
-              mobile: true,
-            },
-          },
-
-          // ==========================================
-          // SERVICE
-          // ==========================================
-          service: {
-            select: {
-              name: true,
-            },
-          },
-
-          // ==========================================
-          // ASTROLOGER
-          // ==========================================
-          astrologer: {
-            select: {
-              name: true,
-            },
-          },
-
-          // ==========================================
-          // PAYMENT ORDERS
-          // ==========================================
-          paymentOrders: {
-            select: {
-              id: true,
-
-              // Total original service/order amount
-              totalAmount: true,
-
-              // Amount paid using wallet
-              walletAmount: true,
-
-              // Actual payable amount
-              payableAmount: true,
-
-              // Cashback amount
-              cashback: true,
-
-              // Coupon ID
-              couponId: true,
-
-              // Payment status
-              status: true,
-
-              createdAt: true,
-
-              // ==========================================
-              // COUPON
-              // ==========================================
-              coupon: {
-                select: {
-                  code: true,
-                  type: true,
-                },
-              },
-
-              // ==========================================
-              // COUPON REDEMPTION
-              // ==========================================
-              couponRedemption: {
-                select: {
-                  discount: true,
-                },
-              },
-            },
+            skip,
+            take,
 
             orderBy: {
               createdAt: "desc",
             },
 
-            take: 1,
-          },
-        },
-      }),
+            select: {
+              id: true,
 
-      prisma.serviceBooking.count({
-        where,
-      }),
-    ]);
+              bookingStatus: true,
 
-    // ==========================================
-    // FORMAT RESPONSE
-    // ==========================================
-    const data = bookings.map((booking) => {
-      // paymentOrders is an array
-      const paymentOrder = booking.paymentOrders?.[0] || null;
+              createdAt: true,
 
-      // ==========================================
-      // ORIGINAL AMOUNT
-      //
-      // Prefer ServicePaymentOrder.totalAmount.
-      // Fallback to ServiceBooking.amount.
-      // ==========================================
-      const originalAmount = Number(
-        paymentOrder?.totalAmount ??
-          booking.amount ??
-          0,
-      );
+              // ==========================================
+              // ORIGINAL SERVICE AMOUNT
+              // ==========================================
+              amount: true,
 
-      // ==========================================
-      // COUPON TYPE
-      // ==========================================
-      const couponType =
-        paymentOrder?.coupon?.type || null;
+              // ==========================================
+              // USER
+              // ==========================================
+              user: {
+                select: {
+                  name: true,
+                  mobile: true,
+                },
+              },
 
-      // ==========================================
-      // COUPON NAME
-      // ==========================================
-      const couponName =
-        paymentOrder?.coupon?.code || null;
+              // ==========================================
+              // SERVICE
+              // ==========================================
+              service: {
+                select: {
+                  name: true,
+                },
+              },
 
-      // ==========================================
-      // COUPON DISCOUNT
-      //
-      // Discount is stored in CouponRedemption.
-      // ==========================================
-      const couponDiscount = Number(
-        paymentOrder?.couponRedemption?.discount ?? 0,
-      );
+              // ==========================================
+              // ASTROLOGER
+              // ==========================================
+              astrologer: {
+                select: {
+                  name: true,
+                },
+              },
 
-      // ==========================================
-      // DISCOUNT AMOUNT
-      //
-      // Only DISCOUNT coupon is counted here.
-      // ==========================================
-      const discountAmount =
-        couponType === "DISCOUNT"
-          ? couponDiscount
-          : 0;
+              // ==========================================
+              // PAYMENT ORDERS
+              // ==========================================
+              paymentOrders: {
+                select: {
+                  id: true,
 
-      // ==========================================
-      // CASHBACK AMOUNT
-      //
-      // Cashback is stored directly on
-      // ServicePaymentOrder.cashback.
-      // ==========================================
-      const cashbackAmount =
-        couponType === "CASHBACK"
-          ? Number(paymentOrder?.cashback ?? 0)
-          : 0;
+                  // Total original service/order amount
+                  totalAmount: true,
 
-      // ==========================================
-      // FINAL PAID AMOUNT
-      //
-      // payableAmount represents the actual
-      // amount payable after discount.
-      //
-      // For DISCOUNT:
-      // payableAmount = original - discount
-      //
-      // For CASHBACK:
-      // user pays the normal amount and
-      // cashback is credited separately.
-      // ==========================================
-      let finalPaidAmount;
+                  // Amount paid using wallet
+                  walletAmount: true,
 
-      if (paymentOrder) {
-        if (couponType === "DISCOUNT") {
-          finalPaidAmount = Number(
-            paymentOrder.payableAmount ??
-              Math.max(
-                0,
-                originalAmount - discountAmount,
-              ),
+                  // Actual payable amount
+                  payableAmount: true,
+
+                  // Cashback amount
+                  cashback: true,
+
+                  // Coupon ID
+                  couponId: true,
+
+                  // Payment status
+                  status: true,
+
+                  createdAt: true,
+
+                  // ==========================================
+                  // COUPON
+                  // ==========================================
+                  coupon: {
+                    select: {
+                      code: true,
+                      type: true,
+                    },
+                  },
+
+                  // ==========================================
+                  // COUPON REDEMPTION
+                  // ==========================================
+                  couponRedemption: {
+                    select: {
+                      discount: true,
+                    },
+                  },
+                },
+
+                orderBy: {
+                  createdAt: "desc",
+                },
+
+                take: 1,
+              },
+            },
+          }),
+
+          prisma.serviceBooking.count({
+            where,
+          }),
+        ]);
+
+        // ==========================================
+        // FORMAT RESPONSE
+        // ==========================================
+        const data = bookings.map((booking) => {
+          // paymentOrders is an array
+          const paymentOrder = booking.paymentOrders?.[0] || null;
+
+          // ==========================================
+          // ORIGINAL AMOUNT
+          //
+          // Prefer ServicePaymentOrder.totalAmount.
+          // Fallback to ServiceBooking.amount.
+          // ==========================================
+          const originalAmount = Number(
+            paymentOrder?.totalAmount ?? booking.amount ?? 0,
           );
-        }
-        else if (couponType === "CASHBACK") {
-          
-          finalPaidAmount = Number(
-            paymentOrder.payableAmount
-              
+
+          // ==========================================
+          // COUPON TYPE
+          // ==========================================
+          const couponType = paymentOrder?.coupon?.type || null;
+
+          // ==========================================
+          // COUPON NAME
+          // ==========================================
+          const couponName = paymentOrder?.coupon?.code || null;
+
+          // ==========================================
+          // COUPON DISCOUNT
+          //
+          // Discount is stored in CouponRedemption.
+          // ==========================================
+          const couponDiscount = Number(
+            paymentOrder?.couponRedemption?.discount ?? 0,
           );
-          console.log("CASHBACK",finalPaidAmount);
-        } else{
-          finalPaidAmount = Number(
-            paymentOrder.payableAmount
-              
-          );
-        }
-        
-      } else {
-        console.log("----------else originalAmount--------",originalAmount);
-        finalPaidAmount = originalAmount;
+
+          // ==========================================
+          // DISCOUNT AMOUNT
+          //
+          // Only DISCOUNT coupon is counted here.
+          // ==========================================
+          const discountAmount = couponType === "DISCOUNT" ? couponDiscount : 0;
+
+          // ==========================================
+          // CASHBACK AMOUNT
+          //
+          // Cashback is stored directly on
+          // ServicePaymentOrder.cashback.
+          // ==========================================
+          const cashbackAmount =
+            couponType === "CASHBACK" ? Number(paymentOrder?.cashback ?? 0) : 0;
+
+          // ==========================================
+          // FINAL PAID AMOUNT
+          //
+          // payableAmount represents the actual
+          // amount payable after discount.
+          //
+          // For DISCOUNT:
+          // payableAmount = original - discount
+          //
+          // For CASHBACK:
+          // user pays the normal amount and
+          // cashback is credited separately.
+          // ==========================================
+          let finalPaidAmount;
+
+          if (paymentOrder) {
+            if (couponType === "DISCOUNT") {
+              finalPaidAmount = Number(
+                paymentOrder.payableAmount ??
+                  Math.max(0, originalAmount - discountAmount),
+              );
+            } else if (couponType === "CASHBACK") {
+              finalPaidAmount = Number(paymentOrder.payableAmount);
+              console.log("CASHBACK", finalPaidAmount);
+            } else {
+              finalPaidAmount = Number(paymentOrder.payableAmount);
+            }
+          } else {
+            console.log(
+              "----------else originalAmount--------",
+              originalAmount,
+            );
+            finalPaidAmount = originalAmount;
+          }
+
+          // ==========================================
+          // RETURN
+          // ==========================================
+          return {
+            id: booking.id,
+
+            // Original service/order amount
+            amount: originalAmount,
+
+            // Coupon information
+            couponName,
+
+            couponType,
+
+            // Discount
+            discountAmount,
+
+            // Cashback
+            cashbackAmount,
+
+            // Actual amount paid by user
+            finalPaidAmount,
+
+            // User
+            userName: booking.user?.name || null,
+
+            userMobile: booking.user?.mobile || null,
+
+            // Service
+            serviceName: booking.service?.name || null,
+
+            // Booking
+            bookingStatus: booking.bookingStatus,
+
+            bookingDate: booking.createdAt
+              ? booking.createdAt.toISOString()
+              : null,
+
+            // Astrologer
+            assignedTo: booking.astrologer?.name || null,
+          };
+        });
+
+        // ==========================================
+        // RETURN
+        // ==========================================
+        return {
+          success: true,
+
+          total,
+
+          currentPage,
+
+          totalPages: Math.ceil(total / take),
+
+          limit: take,
+
+          data,
+        };
+      } catch (error) {
+        console.error("getAdminServiceBookingReport error:", error);
+
+        throw new Error(
+          error.message || "Failed to fetch service booking report",
+        );
       }
-
-      // ==========================================
-      // RETURN
-      // ==========================================
-      return {
-        id: booking.id,
-
-        // Original service/order amount
-        amount: originalAmount,
-
-        // Coupon information
-        couponName,
-
-        couponType,
-
-        // Discount
-        discountAmount,
-
-        // Cashback
-        cashbackAmount,
-
-        // Actual amount paid by user
-        finalPaidAmount,
-
-        // User
-        userName: booking.user?.name || null,
-
-        userMobile: booking.user?.mobile || null,
-
-        // Service
-        serviceName: booking.service?.name || null,
-
-        // Booking
-        bookingStatus: booking.bookingStatus,
-
-        bookingDate: booking.createdAt
-          ? booking.createdAt.toISOString()
-          : null,
-
-        // Astrologer
-        assignedTo: booking.astrologer?.name || null,
-      };
-    });
-
-    // ==========================================
-    // RETURN
-    // ==========================================
-    return {
-      success: true,
-
-      total,
-
-      currentPage,
-
-      totalPages: Math.ceil(total / take),
-
-      limit: take,
-
-      data,
-    };
-  } catch (error) {
-    console.error(
-      "getAdminServiceBookingReport error:",
-      error,
-    );
-
-    throw new Error(
-      error.message ||
-        "Failed to fetch service booking report",
-    );
-  }
-},
-
+    },
   },
 
   // **********************************************START MUTATION**********************************
@@ -9969,6 +10059,245 @@ export const resolvers = {
           isActive: status,
         },
       });
+    },
+
+     createPujaService: async (_, args, context) => {
+      const prisma = context.prisma;
+
+      validatePrice(args.price, args.mrp, args.discount);
+
+      const mantraOptions = cleanMantras(args.mantraOptions);
+      const faqs = cleanFAQs(args.faqs);
+
+      try {
+        return await prisma.pujaService.create({
+          data: {
+            title: args.title.trim(),
+            slug: args.slug.trim(),
+            image: args.image.trim(),
+            category: optionalText(args.category),
+
+            shortDescription: optionalText(args.shortDescription),
+            description: optionalText(args.description),
+            benefits: optionalText(args.benefits),
+            howToPerform: optionalText(args.howToPerform),
+            packaging: optionalText(args.packaging),
+
+            price: args.price,
+            mrp: args.mrp ?? null,
+            discount: args.discount ?? null,
+
+            // These are admin-managed display fields.
+            customersCount: args.customersCount ?? 0,
+            rating: 0,
+
+            mantraOptions: {
+              create: mantraOptions.map((name) => ({ name })),
+            },
+
+            faqs: {
+              create: faqs,
+            },
+          },
+          include: pujaInclude,
+        });
+      } catch (error) {
+        handlePrismaError(error);
+      }
+    },
+
+    // ==========================================
+    // UPDATE PUJA
+    // ==========================================
+    updatePujaService: async (_, { id, ...args }, context) => {
+      const prisma = context.prisma;
+
+      validatePrice(args.price, args.mrp, args.discount);
+
+      const mantraOptions = cleanMantras(args.mantraOptions);
+      const faqs = cleanFAQs(args.faqs);
+
+      try {
+        // Replace editable mantra options and FAQs atomically.
+        // Reviews are intentionally NOT deleted during an update.
+        return await prisma.$transaction(async (tx) => {
+          const existing = await tx.pujaService.findUnique({
+            where: { id },
+            select: { id: true },
+          });
+
+          if (!existing) {
+            throw new GraphQLError("Puja Service not found.", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
+
+          return tx.pujaService.update({
+            where: { id },
+            data: {
+              title: args.title.trim(),
+              slug: args.slug.trim(),
+              image: args.image.trim(),
+              category: optionalText(args.category),
+
+              shortDescription: optionalText(args.shortDescription),
+              description: optionalText(args.description),
+              benefits: optionalText(args.benefits),
+              howToPerform: optionalText(args.howToPerform),
+              packaging: optionalText(args.packaging),
+
+              price: args.price,
+              mrp: args.mrp ?? null,
+              discount: args.discount ?? null,
+
+              customersCount: args.customersCount ?? 0,
+
+              mantraOptions: {
+                deleteMany: {},
+                create: mantraOptions.map((name) => ({ name })),
+              },
+
+              faqs: {
+                deleteMany: {},
+                create: faqs,
+              },
+            },
+            include: pujaInclude,
+          });
+        });
+      } catch (error) {
+        handlePrismaError(error);
+      }
+    },
+
+    // ==========================================
+    // DELETE PUJA
+    // ==========================================
+    deletePujaService: async (_, { id }, context) => {
+      try {
+        await context.prisma.pujaService.delete({
+          where: { id },
+        });
+
+        return true;
+      } catch (error) {
+        handlePrismaError(error);
+      }
+    },
+
+    // ==========================================
+    // CREATE REVIEW
+    // ==========================================
+    createPujaReview: async (
+      _,
+      { pujaId, rating, comment },
+      context
+    ) => {
+      const prisma = context.prisma;
+
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        throw new GraphQLError(
+          "Rating must be an integer between 1 and 5."
+        );
+      }
+
+      if (!comment?.trim()) {
+        throw new GraphQLError("Review comment is required.");
+      }
+
+      const user = context.user;
+
+      // Adapt these fields to your existing auth context.
+      const userId = user?.id ?? null;
+      const userName =
+        user?.name ||
+        user?.fullName ||
+        user?.username ||
+        "Guest";
+
+      const puja = await prisma.pujaService.findUnique({
+        where: { id: pujaId },
+        select: { id: true },
+      });
+
+      if (!puja) {
+        throw new GraphQLError("Puja Service not found.", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
+
+      // New reviews are pending until approved by an admin.
+      return prisma.pujaReview.create({
+        data: {
+          pujaId,
+          userId,
+          userName,
+          rating,
+          comment: comment.trim(),
+          status: "PENDING",
+        },
+      });
+    },
+
+    // ==========================================
+    // APPROVE / REJECT REVIEW
+    // ==========================================
+    updatePujaReviewStatus: async (
+      _,
+      { id, status },
+      context
+    ) => {
+      const prisma = context.prisma;
+
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const review = await tx.pujaReview.update({
+            where: { id },
+            data: { status },
+          });
+
+          await recalculatePujaRating(tx, review.pujaId);
+
+          return review;
+        });
+      } catch (error) {
+        handlePrismaError(error);
+      }
+    },
+
+    // ==========================================
+    // DELETE REVIEW
+    // ==========================================
+    deletePujaReview: async (_, { id }, context) => {
+      const prisma = context.prisma;
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          const review = await tx.pujaReview.findUnique({
+            where: { id },
+            select: {
+              id: true,
+              pujaId: true,
+            },
+          });
+
+          if (!review) {
+            throw new GraphQLError("Review not found.", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
+
+          await tx.pujaReview.delete({
+            where: { id },
+          });
+
+          await recalculatePujaRating(tx, review.pujaId);
+        });
+
+        return true;
+      } catch (error) {
+        handlePrismaError(error);
+      }
     },
   },
 
