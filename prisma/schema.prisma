@@ -1850,3 +1850,116 @@ sessionDate DateTime
   @@index([requestedByStaffId])
   @@index([createdAt])
 }
+
+//-----------------puja tables-------------------
+model PujaService {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Basic Information
+  title           String
+  slug            String   @unique
+  image           String
+  category        String?
+
+  // Description
+  shortDescription String?
+  description      String?
+  benefits         String?
+  howToPerform     String?
+  packaging        String?
+
+  // Pricing
+  price            Float
+  mrp              Float?
+  discount         Float?
+
+  // Social Proof
+  customersCount   Int      @default(0)
+  rating           Float    @default(0)
+
+  // Relations
+  mantraOptions    PujaMantraOption[]
+  faqs             PujaFAQ[]
+  reviews          PujaReview[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+
+model PujaMantraOption {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+
+  name        String
+
+  pujaId      String      @db.ObjectId
+  puja        PujaService @relation(
+    fields: [pujaId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt   DateTime    @default(now())
+
+  @@index([pujaId])
+}
+
+
+model PujaFAQ {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+
+  question    String
+  answer      String
+
+  pujaId      String      @db.ObjectId
+  puja        PujaService @relation(
+    fields: [pujaId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([pujaId])
+}
+
+
+model PujaReview {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+
+  pujaId      String      @db.ObjectId
+  puja        PujaService @relation(
+    fields: [pujaId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  // Existing logged-in user
+  userId      String?     @db.ObjectId
+
+  userName    String
+
+  rating      Int
+  comment     String
+
+  // Useful for admin moderation
+  status      PujaReviewStatus @default(PENDING)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([pujaId])
+  @@index([userId])
+  @@index([status])
+}
+
+
+enum PujaReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
