@@ -1597,6 +1597,7 @@ model LiveStream {
   updatedAt DateTime @updatedAt
 }
 
+
 enum LiveStatus {
   SCHEDULED
   LIVE
