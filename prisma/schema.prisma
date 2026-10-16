@@ -1590,6 +1590,7 @@ model LiveStream {
   status LiveStatus @default(SCHEDULED)
 
   scheduledAt DateTime?
+  scheduledEndAt  DateTime?
   startedAt   DateTime?
   endedAt     DateTime?
 
