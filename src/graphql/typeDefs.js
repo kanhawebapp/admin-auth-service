@@ -2420,7 +2420,7 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
   }
-      #-------START LIVE STREAMING-------
+  #-------START LIVE STREAMING-------
 
   enum LiveStatus {
     SCHEDULED
@@ -2453,16 +2453,16 @@ const typeDefs = gql`
   }
 
   type LiveGiftTransaction {
-  id: ID!
-  streamId: String!
-  senderId: String
-  astrologerId: String
-  giftId: String
-  quantity: Int
-  totalCoins: Float
-  status: String
-  createdAt: String
-}
+    id: ID!
+    streamId: String!
+    senderId: String
+    astrologerId: String
+    giftId: String
+    quantity: Int
+    totalCoins: Float
+    status: String
+    createdAt: String
+  }
 
   input LiveGiftTransactionFilterInput {
     senderId: ID
@@ -2474,15 +2474,39 @@ const typeDefs = gql`
     endDate: String
   }
 
- 
-type LiveGiftTransactionPagination {
-  transactions: [LiveGiftTransaction!]!
-  totalRecords: Int!
-  totalPages: Int!
-  currentPage: Int!
-  limit: Int!
-  totalCoins: Float!
-}
+  type LiveGiftTransactionPagination {
+    transactions: [LiveGiftTransaction!]!
+    totalRecords: Int!
+    totalPages: Int!
+    currentPage: Int!
+    limit: Int!
+    totalCoins: Float!
+  }
+
+  type RunningLiveStreamAstrologer {
+    id: ID!
+    name: String
+    displayName: String
+    profilePic: String
+    rating: Float
+  }
+
+  type RunningLiveStream {
+    id: ID!
+    astrologerId: ID!
+    title: String!
+    channelName: String!
+    chatRoomId: String
+    status: LiveStatus!
+    scheduledAt: String
+    scheduledEndAt: String
+    startedAt: String
+    createdAt: String!
+    endedAt: String
+    updatedAt: String
+    totalViews: Int!
+    astrologer: RunningLiveStreamAstrologer
+  }
 
   #--------END LIVE STREAMING---------
   type Query {
@@ -2726,15 +2750,15 @@ type LiveGiftTransactionPagination {
       bookingStatus: String
     ): AdminServiceBookingReportResponse!
 
+    getAllScheduledLives: [LiveStream!]!
 
-  getAllScheduledLives: [LiveStream!]!
+    getLiveGiftTransactions(
+      page: Int
+      limit: Int
+      filters: LiveGiftTransactionFilterInput
+    ): LiveGiftTransactionPagination!
 
-  getLiveGiftTransactions(
-    page: Int
-    limit: Int
-    filters: LiveGiftTransactionFilterInput
-  ): LiveGiftTransactionPagination!
-
+    getRunningLiveStreams: [RunningLiveStream!]!
   }
 
   type Mutation {
@@ -3124,12 +3148,11 @@ type LiveGiftTransactionPagination {
     deletePujaReview(id: ID!): Boolean!
     adminDeleteScheduledLive(id: ID!): Boolean!
     adminUpdateScheduledLive(
-    id: ID!
-    title: String!
-    scheduledAt: String!
-    scheduledEndAt: String!
-  ): LiveStream!
-
+      id: ID!
+      title: String!
+      scheduledAt: String!
+      scheduledEndAt: String!
+    ): LiveStream!
   }
 `;
 

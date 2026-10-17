@@ -5782,7 +5782,7 @@ export const resolvers = {
     getLiveGiftTransactions: async (
       _,
       { page = 1, limit = 20, filters = {} },
-      context
+      context,
     ) => {
       try {
         // ==========================================
@@ -5796,10 +5796,13 @@ export const resolvers = {
         if (!context?.user) {
           throw new Error("Unauthorized");
         }
-        console.log("rolllllllllllllllllllllllllllll name          :",role.name);
+        console.log(
+          "rolllllllllllllllllllllllllllll name          :",
+          role.name,
+        );
         if (role.name !== "SUPER_ADMIN") {
           throw new Error(
-            "Forbidden: Only SUPER_ADMIN can view gift transactions"
+            "Forbidden: Only SUPER_ADMIN can view gift transactions",
           );
         }
 
@@ -5809,10 +5812,7 @@ export const resolvers = {
 
         const currentPage = Math.max(1, Number(page) || 1);
 
-        const pageSize = Math.min(
-          100,
-          Math.max(1, Number(limit) || 20)
-        );
+        const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
 
         const skip = (currentPage - 1) * pageSize;
 
@@ -5892,9 +5892,7 @@ export const resolvers = {
             where.createdAt.lte &&
             where.createdAt.gte > where.createdAt.lte
           ) {
-            throw new Error(
-              "startDate must be before or equal to endDate"
-            );
+            throw new Error("startDate must be before or equal to endDate");
           }
         }
 
@@ -5902,32 +5900,28 @@ export const resolvers = {
         // 5. FETCH TRANSACTIONS AND TOTAL COUNT
         // ==========================================
 
-        const [transactions, totalRecords, coinAggregate] =
-          await Promise.all([
-            prisma.liveGiftTransaction.findMany({
-              where,
-              skip,
-              take: pageSize,
-              orderBy: [
-                { createdAt: "desc" },
-                { id: "desc" },
-              ],
-            }),
+        const [transactions, totalRecords, coinAggregate] = await Promise.all([
+          prisma.liveGiftTransaction.findMany({
+            where,
+            skip,
+            take: pageSize,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          }),
 
-            prisma.liveGiftTransaction.count({
-              where,
-            }),
+          prisma.liveGiftTransaction.count({
+            where,
+          }),
 
-            prisma.liveGiftTransaction.aggregate({
-              where: {
-                ...where,
-                status: "SUCCESS",
-              },
-              _sum: {
-                totalCoins: true,
-              },
-            }),
-          ]);
+          prisma.liveGiftTransaction.aggregate({
+            where: {
+              ...where,
+              status: "SUCCESS",
+            },
+            _sum: {
+              totalCoins: true,
+            },
+          }),
+        ]);
 
         // ==========================================
         // 6. CALCULATE PAGINATION METADATA
@@ -5953,13 +5947,41 @@ export const resolvers = {
           totalCoins: coinAggregate._sum.totalCoins ?? 0,
         };
       } catch (error) {
-        console.error(
-          "getLiveGiftTransactions error:",
-          error
-        );
+        console.error("getLiveGiftTransactions error:", error);
 
         throw error;
       }
+    },
+    getRunningLiveStreams: async (_, __, context) => {
+      const liveStreams = await context.prisma.liveStream.findMany({
+        where: {
+          status: "LIVE",
+        },
+        include: {
+          astrologer: {
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+              profilePic: true,
+              rating: true,
+            },
+          },
+        },
+        orderBy: {
+          startedAt: "desc",
+        },
+      });
+
+      return liveStreams.map((live) => ({
+        ...live,
+        totalViews: live.totalViews ?? 0,
+        scheduledAt: live.scheduledAt?.toISOString() ?? null,
+        scheduledEndAt: live.scheduledEndAt?.toISOString() ?? null,
+        startedAt: live.startedAt?.toISOString() ?? null,
+        createdAt: live.createdAt.toISOString(),
+        endedAt: live.endedAt?.toISOString() ?? null,
+      }));
     },
   },
 
