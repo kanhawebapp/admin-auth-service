@@ -5750,10 +5750,13 @@ export const resolvers = {
       try {
         // Validate pagination inputs
         const requestedPage = Math.max(1, Number(page) || 1);
+
         const pageSize = Math.min(100, Math.max(1, Number(limit) || 10));
 
+        // FIX: Handle null or undefined search values
+        const searchTerm = typeof search === "string" ? search.trim() : "";
+
         const now = new Date();
-        const searchTerm = search.trim();
 
         // Base filter
         const where = {
@@ -5826,7 +5829,7 @@ export const resolvers = {
 
         const skip = (currentPage - 1) * pageSize;
 
-        // Fetch only the requested page
+        // Fetch the requested page
         const lives = await prisma.liveStream.findMany({
           where,
           skip,
