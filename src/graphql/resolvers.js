@@ -5792,12 +5792,12 @@ export const resolvers = {
         // Adapt this check to your existing admin
         // authentication and role middleware.
         const role = context?.user?.role;
-
+        console.log(role);
         if (!context?.user) {
           throw new Error("Unauthorized");
         }
-
-        if (role !== "SUPER_ADMIN") {
+        console.log("rolllllllllllllllllllllllllllll name          :",role.name);
+        if (role.name !== "SUPER_ADMIN") {
           throw new Error(
             "Forbidden: Only SUPER_ADMIN can view gift transactions"
           );
