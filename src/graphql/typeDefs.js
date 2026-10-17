@@ -2453,9 +2453,16 @@ const typeDefs = gql`
   }
 
   type LiveGiftTransaction {
-    id: ID!
-    streamId: String!
-  }
+  id: ID!
+  streamId: String!
+  senderId: String
+  astrologerId: String
+  giftId: String
+  quantity: Int
+  totalCoins: Float
+  status: String
+  createdAt: String
+}
 
   input LiveGiftTransactionFilterInput {
     senderId: ID
@@ -2467,13 +2474,15 @@ const typeDefs = gql`
     endDate: String
   }
 
-  type LiveGiftTransactionPagination {
-    data: [LiveGiftTransaction!]!
-    totalCount: Int!
-    currentPage: Int!
-    totalPages: Int!
-    totalCoins: Float!
-  }
+ 
+type LiveGiftTransactionPagination {
+  transactions: [LiveGiftTransaction!]!
+  totalRecords: Int!
+  totalPages: Int!
+  currentPage: Int!
+  limit: Int!
+  totalCoins: Float!
+}
 
   #--------END LIVE STREAMING---------
   type Query {
