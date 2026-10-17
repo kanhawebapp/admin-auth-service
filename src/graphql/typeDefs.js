@@ -2452,6 +2452,11 @@ type LiveStreamAstrologer {
   profilePic: String
 }
 
+type LiveGiftTransaction {
+  id: ID!
+  streamId: String!
+
+
 #--------END LIVE STREAMING---------
   type Query {
     # puja services
@@ -2696,6 +2701,12 @@ type LiveStreamAstrologer {
 
 
   getAllScheduledLives: [LiveStream!]!
+
+  getLiveGiftTransactions(
+    page: Int
+    limit: Int
+    filters: LiveGiftTransactionFilterInput
+  ): LiveGiftTransactionPagination!
 
   }
 

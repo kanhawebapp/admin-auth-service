@@ -5779,6 +5779,188 @@ export const resolvers = {
         throw error;
       }
     },
+    getLiveGiftTransactions: async (
+      _,
+      { page = 1, limit = 20, filters = {} },
+      context
+    ) => {
+      try {
+        // ==========================================
+        // 1. ADMIN AUTHORIZATION
+        // ==========================================
+
+        // Adapt this check to your existing admin
+        // authentication and role middleware.
+        const role = context?.user?.role;
+
+        if (!context?.user) {
+          throw new Error("Unauthorized");
+        }
+
+        if (role !== "SUPER_ADMIN") {
+          throw new Error(
+            "Forbidden: Only SUPER_ADMIN can view gift transactions"
+          );
+        }
+
+        // ==========================================
+        // 2. VALIDATE PAGINATION
+        // ==========================================
+
+        const currentPage = Math.max(1, Number(page) || 1);
+
+        const pageSize = Math.min(
+          100,
+          Math.max(1, Number(limit) || 20)
+        );
+
+        const skip = (currentPage - 1) * pageSize;
+
+        // ==========================================
+        // 3. BUILD FILTER CONDITIONS
+        // ==========================================
+
+        const {
+          senderId,
+          astrologerId,
+          streamId,
+          giftId,
+          status,
+          startDate,
+          endDate,
+        } = filters;
+
+        const where = {};
+
+        if (senderId?.trim()) {
+          where.senderId = senderId.trim();
+        }
+
+        if (astrologerId?.trim()) {
+          where.astrologerId = astrologerId.trim();
+        }
+
+        if (streamId?.trim()) {
+          where.streamId = streamId.trim();
+        }
+
+        if (giftId?.trim()) {
+          where.giftId = giftId.trim();
+        }
+
+        if (status?.trim()) {
+          // Cast to the generated Prisma field type.
+          // This avoids hardcoding an unknown enum name.
+          where.status = status.trim();
+        }
+
+        // ==========================================
+        // 4. DATE FILTERING
+        // ==========================================
+
+        if (startDate || endDate) {
+          where.createdAt = {};
+
+          if (startDate) {
+            const start = new Date(startDate);
+
+            if (Number.isNaN(start.getTime())) {
+              throw new Error("Invalid startDate");
+            }
+
+            where.createdAt.gte = start;
+          }
+
+          if (endDate) {
+            const end = new Date(endDate);
+
+            if (Number.isNaN(end.getTime())) {
+              throw new Error("Invalid endDate");
+            }
+
+            // Include the complete specified end date
+            // when the client sends YYYY-MM-DD.
+            if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+              end.setUTCHours(23, 59, 59, 999);
+            }
+
+            where.createdAt.lte = end;
+          }
+
+          if (
+            where.createdAt.gte &&
+            where.createdAt.lte &&
+            where.createdAt.gte > where.createdAt.lte
+          ) {
+            throw new Error(
+              "startDate must be before or equal to endDate"
+            );
+          }
+        }
+
+        // ==========================================
+        // 5. FETCH TRANSACTIONS AND TOTAL COUNT
+        // ==========================================
+
+        const [transactions, totalRecords, coinAggregate] =
+          await Promise.all([
+            prisma.liveGiftTransaction.findMany({
+              where,
+              skip,
+              take: pageSize,
+              orderBy: [
+                { createdAt: "desc" },
+                { id: "desc" },
+              ],
+            }),
+
+            prisma.liveGiftTransaction.count({
+              where,
+            }),
+
+            prisma.liveGiftTransaction.aggregate({
+              where: {
+                ...where,
+                status: "SUCCESS",
+              },
+              _sum: {
+                totalCoins: true,
+              },
+            }),
+          ]);
+
+        // ==========================================
+        // 6. CALCULATE PAGINATION METADATA
+        // ==========================================
+
+        const totalPages = Math.ceil(totalRecords / pageSize);
+
+        // ==========================================
+        // 7. RETURN RESPONSE
+        // ==========================================
+
+        return {
+          transactions: transactions.map((transaction) => ({
+            ...transaction,
+            createdAt: transaction.createdAt.toISOString(),
+          })),
+
+          totalRecords,
+          totalPages,
+          currentPage,
+          limit: pageSize,
+
+          totalCoins: coinAggregate._sum.totalCoins ?? 0,
+        };
+      } catch (error) {
+        console.error(
+          "getLiveGiftTransactions error:",
+          error
+        );
+
+        throw error;
+      }
+    },
   },
 
   // **********************************************START MUTATION**********************************
