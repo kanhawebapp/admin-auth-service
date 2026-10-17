@@ -2507,7 +2507,13 @@ const typeDefs = gql`
     totalViews: Int!
     astrologer: RunningLiveStreamAstrologer
   }
-
+  type ScheduledLivesPagination {
+    lives: [LiveStream!]!
+    totalRecords: Int!
+    currentPage: Int!
+    limit: Int!
+    totalPages: Int!
+  }
   #--------END LIVE STREAMING---------
   type Query {
     # puja services
@@ -2750,7 +2756,11 @@ const typeDefs = gql`
       bookingStatus: String
     ): AdminServiceBookingReportResponse!
 
-    getAllScheduledLives: [LiveStream!]!
+    getAllScheduledLives(
+      page: Int = 1
+      limit: Int = 10
+      search: String
+    ): ScheduledLivesPagination!
 
     getLiveGiftTransactions(
       page: Int

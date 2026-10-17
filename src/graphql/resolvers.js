@@ -5737,25 +5737,100 @@ export const resolvers = {
       }
     },
 
-    getAllScheduledLives: async (_, __, context) => {
+    getAllScheduledLives: async (
+      _,
+      { page = 1, limit = 10, search = "" },
+      context,
+    ) => {
       const { prisma } = context;
 
       // Check admin permission
       await checkPermission(context, "liveStreams.read");
 
       try {
-        const now = new Date();
+        // Validate pagination inputs
+        const requestedPage = Math.max(1, Number(page) || 1);
+        const pageSize = Math.min(100, Math.max(1, Number(limit) || 10));
 
-        const scheduledLives = await prisma.liveStream.findMany({
-          where: {
-            status: "SCHEDULED",
-            scheduledAt: {
-              not: null,
-            },
-            scheduledEndAt: {
-              gt: now,
-            },
+        const now = new Date();
+        const searchTerm = search.trim();
+
+        // Base filter
+        const where = {
+          status: "SCHEDULED",
+          scheduledAt: {
+            not: null,
           },
+          scheduledEndAt: {
+            gt: now,
+          },
+        };
+
+        // Optional search filter
+        if (searchTerm) {
+          where.AND = [
+            {
+              OR: [
+                {
+                  title: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  channelName: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  astrologerId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  astrologer: {
+                    is: {
+                      name: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                      },
+                    },
+                  },
+                },
+                {
+                  astrologer: {
+                    is: {
+                      displayName: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ];
+        }
+
+        // Count matching records
+        const totalRecords = await prisma.liveStream.count({
+          where,
+        });
+
+        const totalPages = Math.ceil(totalRecords / pageSize);
+
+        // Prevent requesting a page beyond the available range
+        const currentPage = Math.min(requestedPage, Math.max(totalPages, 1));
+
+        const skip = (currentPage - 1) * pageSize;
+
+        // Fetch only the requested page
+        const lives = await prisma.liveStream.findMany({
+          where,
+          skip,
+          take: pageSize,
 
           include: {
             astrologer: {
@@ -5773,7 +5848,13 @@ export const resolvers = {
           },
         });
 
-        return scheduledLives;
+        return {
+          lives,
+          totalRecords,
+          currentPage,
+          limit: pageSize,
+          totalPages,
+        };
       } catch (error) {
         console.error("getAllScheduledLives Error:", error);
         throw error;
@@ -10589,43 +10670,43 @@ export const resolvers = {
         },
       });
     },
-    
+
     adminDeleteScheduledLive: async (_, { id }, context) => {
-  const { prisma } = context;
+      const { prisma } = context;
 
-  try {
-    // 1. Check admin permission
-    await checkPermission(context, "liveStreams.delete");
+      try {
+        // 1. Check admin permission
+        await checkPermission(context, "liveStreams.delete");
 
-    // 2. Find the live stream
-    const existingLive = await prisma.liveStream.findUnique({
-      where: { id },
-    });
+        // 2. Find the live stream
+        const existingLive = await prisma.liveStream.findUnique({
+          where: { id },
+        });
 
-    if (!existingLive) {
-      throw new Error("Live stream not found");
-    }
+        if (!existingLive) {
+          throw new Error("Live stream not found");
+        }
 
-    // 3. Allow deletion of scheduled or running streams
-    if (!["SCHEDULED", "LIVE"].includes(existingLive.status)) {
-      throw new Error(
-        "Only scheduled or running live streams can be deleted"
-      );
-    }
+        // 3. Allow deletion of scheduled or running streams
+        if (!["SCHEDULED", "LIVE"].includes(existingLive.status)) {
+          throw new Error(
+            "Only scheduled or running live streams can be deleted",
+          );
+        }
 
-    // 4. Delete the live stream
-    await prisma.liveStream.delete({
-      where: { id },
-    });
+        // 4. Delete the live stream
+        await prisma.liveStream.delete({
+          where: { id },
+        });
 
-    // 5. Return success
-    return true;
-  } catch (error) {
-    console.error("adminDeleteScheduledLive error:", error);
+        // 5. Return success
+        return true;
+      } catch (error) {
+        console.error("adminDeleteScheduledLive error:", error);
 
-    throw new Error(error.message || "Failed to delete live stream");
-  }
-},
+        throw new Error(error.message || "Failed to delete live stream");
+      }
+    },
   },
 
   Blog: {
