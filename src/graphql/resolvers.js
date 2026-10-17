@@ -10330,84 +10330,84 @@ export const resolvers = {
       }
     },
     adminUpdateScheduledLive: async (
-  _,
-  { id, title, scheduledAt, scheduledEndAt },
-  context
-) => {
-  const { prisma } = context;
+      _,
+      { id, title, scheduledAt, scheduledEndAt },
+      context,
+    ) => {
+      const { prisma } = context;
 
-  await checkPermission(context, "liveStreams.update");
+      await checkPermission(context, "liveStreams.update");
 
-  if (!id) {
-    throw new Error("Live stream ID is required");
-  }
+      if (!id) {
+        throw new Error("Live stream ID is required");
+      }
 
-  if (!title?.trim()) {
-    throw new Error("Live title is required");
-  }
+      if (!title?.trim()) {
+        throw new Error("Live title is required");
+      }
 
-  const existingLive = await prisma.liveStream.findUnique({
-    where: { id },
-  });
+      const existingLive = await prisma.liveStream.findUnique({
+        where: { id },
+      });
 
-  if (!existingLive) {
-    throw new Error("Live stream not found");
-  }
+      if (!existingLive) {
+        throw new Error("Live stream not found");
+      }
 
-  if (existingLive.status !== "SCHEDULED") {
-    throw new Error("Only scheduled live streams can be edited");
-  }
+      if (existingLive.status !== "SCHEDULED") {
+        throw new Error("Only scheduled live streams can be edited");
+      }
 
-  const startDate = new Date(scheduledAt);
-  const endDate = new Date(scheduledEndAt);
+      const startDate = new Date(scheduledAt);
+      const endDate = new Date(scheduledEndAt);
 
-  if (
-    Number.isNaN(startDate.getTime()) ||
-    Number.isNaN(endDate.getTime())
-  ) {
-    throw new Error("Invalid scheduled date");
-  }
+      if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(endDate.getTime())
+      ) {
+        throw new Error("Invalid scheduled date");
+      }
 
-  if (startDate <= new Date()) {
-    throw new Error("Scheduled start time must be in the future");
-  }
+      if (startDate <= new Date()) {
+        throw new Error("Scheduled start time must be in the future");
+      }
 
-  if (endDate <= startDate) {
-    throw new Error("Scheduled end must be later than start");
-  }
+      if (endDate <= startDate) {
+        throw new Error("Scheduled end must be later than start");
+      }
 
-  return prisma.liveStream.update({
-    where: { id },
-    data: {
-      title: title.trim(),
-      scheduledAt: startDate,
-      scheduledEndAt: endDate,
+      return prisma.liveStream.update({
+        where: { id },
+        data: {
+          title: title.trim(),
+          scheduledAt: startDate,
+          scheduledEndAt: endDate,
+        },
+      });
     },
-  });
-},
-adminDeleteScheduledLive: async (_, { id }, context) => {
-  const { prisma } = context;
+    adminDeleteScheduledLive: async (_, { id }, context) => {
+      const { prisma } = context;
 
-  await checkPermission(context, "liveStreams.delete");
+      await checkPermission(context, "liveStreams.delete");
 
-  const existingLive = await prisma.liveStream.findUnique({
-    where: { id },
-  });
+      const existingLive = await prisma.liveStream.findUnique({
+        where: { id },
+      });
 
-  if (!existingLive) {
-    throw new Error("Live stream not found");
-  }
+      if (!existingLive) {
+        throw new Error("Live stream not found");
+      }
 
-  if (existingLive.status !== "SCHEDULED") {
-    throw new Error("Only scheduled live streams can be deleted");
-  }
+      if (existingLive.status !== "SCHEDULED") {
+        throw new Error("Only scheduled live streams can be deleted");
+      }
 
-  await prisma.liveStream.delete({
-    where: { id },
-  });
+      await prisma.liveStream.delete({
+        where: { id },
+      });
 
-  return true;
-},
+      return true;
+    },
   },
 
   Blog: {

@@ -2420,8 +2420,15 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
   }
-  #-------start for live streaming-------
-  type LiveStream {
+ #-------START LIVE STREAMING-------
+
+enum LiveStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
+
+type LiveStream {
   id: ID!
   astrologerId: ID!
   title: String!
@@ -2444,8 +2451,8 @@ type LiveStreamAstrologer {
   displayName: String
   profilePic: String
 }
-  #--------ENd LIVE STREAM---------
 
+#--------END LIVE STREAMING---------
   type Query {
     # puja services
     pujaServices: [PujaService!]!
@@ -3078,7 +3085,13 @@ type LiveStreamAstrologer {
 
     deletePujaReview(id: ID!): Boolean!
     adminDeleteScheduledLive(id: ID!): Boolean!
-    
+    adminUpdateScheduledLive(
+    id: ID!
+    title: String!
+    scheduledAt: String!
+    scheduledEndAt: String!
+  ): LiveStream!
+
   }
 `;
 
