@@ -10061,7 +10061,7 @@ export const resolvers = {
       });
     },
 
-     createPujaService: async (_, args, context) => {
+    createPujaService: async (_, args, context) => {
       const prisma = context.prisma;
 
       validatePrice(args.price, args.mrp, args.discount);
@@ -10188,17 +10188,11 @@ export const resolvers = {
     // ==========================================
     // CREATE REVIEW
     // ==========================================
-    createPujaReview: async (
-      _,
-      { pujaId, rating, comment },
-      context
-    ) => {
+    createPujaReview: async (_, { pujaId, rating, comment }, context) => {
       const prisma = context.prisma;
 
       if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-        throw new GraphQLError(
-          "Rating must be an integer between 1 and 5."
-        );
+        throw new GraphQLError("Rating must be an integer between 1 and 5.");
       }
 
       if (!comment?.trim()) {
@@ -10210,10 +10204,7 @@ export const resolvers = {
       // Adapt these fields to your existing auth context.
       const userId = user?.id ?? null;
       const userName =
-        user?.name ||
-        user?.fullName ||
-        user?.username ||
-        "Guest";
+        user?.name || user?.fullName || user?.username || "Guest";
 
       const puja = await prisma.pujaService.findUnique({
         where: { id: pujaId },
@@ -10242,11 +10233,7 @@ export const resolvers = {
     // ==========================================
     // APPROVE / REJECT REVIEW
     // ==========================================
-    updatePujaReviewStatus: async (
-      _,
-      { id, status },
-      context
-    ) => {
+    updatePujaReviewStatus: async (_, { id, status }, context) => {
       const prisma = context.prisma;
 
       try {

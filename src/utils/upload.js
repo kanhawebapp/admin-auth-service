@@ -7,19 +7,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const getUploadPath = (type = "") => {
-  return path.join(
-    __dirname,
-    "..",
-    "uploads",
-    type
-  );
+  return path.join(__dirname, "..", "uploads", type);
 };
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadPath = getUploadPath();
-
-    
 
     if (req.originalUrl.includes("upload-banner")) {
       uploadPath = getUploadPath("banners");
@@ -29,15 +22,14 @@ const storage = multer.diskStorage({
       uploadPath = getUploadPath("profile");
     } else if (req.originalUrl.includes("upload-gifts")) {
       uploadPath = getUploadPath("gifts");
-    }
-    else if (req.originalUrl.includes("upload-testimonials")) {
+    } else if (req.originalUrl.includes("upload-testimonials")) {
       uploadPath = getUploadPath("testimonials");
-    }
-    else if (req.originalUrl.includes("upload-services")) {
+    } else if (req.originalUrl.includes("upload-services")) {
       uploadPath = getUploadPath("services");
-    }
-      else if (req.originalUrl.includes("blog-images")) {
+    } else if (req.originalUrl.includes("blog-images")) {
       uploadPath = getUploadPath("blog");
+    } else if (req.originalUrl.includes("puja-image")) {
+      uploadPath = getUploadPath("puja");
     }
 
     fs.mkdirSync(uploadPath, { recursive: true });
