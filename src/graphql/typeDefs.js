@@ -2420,44 +2420,62 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
   }
- #-------START LIVE STREAMING-------
+      #-------START LIVE STREAMING-------
 
-enum LiveStatus {
-  SCHEDULED
-  LIVE
-  ENDED
-}
+  enum LiveStatus {
+    SCHEDULED
+    LIVE
+    ENDED
+  }
 
-type LiveStream {
-  id: ID!
-  astrologerId: ID!
-  title: String!
-  channelName: String!
-  chatRoomId: String
-  status: LiveStatus!
-  scheduledAt: String
-  scheduledEndAt: String
-  createdAt: String
-  startedAt: String
-  endedAt: String
-  totalViews: Int
+  type LiveStream {
+    id: ID!
+    astrologerId: ID!
+    title: String!
+    channelName: String!
+    chatRoomId: String
+    status: LiveStatus!
+    scheduledAt: String
+    scheduledEndAt: String
+    createdAt: String
+    startedAt: String
+    endedAt: String
+    totalViews: Int
 
-  astrologer: LiveStreamAstrologer
-}
+    astrologer: LiveStreamAstrologer
+  }
 
-type LiveStreamAstrologer {
-  id: ID!
-  name: String
-  displayName: String
-  profilePic: String
-}
+  type LiveStreamAstrologer {
+    id: ID!
+    name: String
+    displayName: String
+    profilePic: String
+  }
 
-type LiveGiftTransaction {
-  id: ID!
-  streamId: String!
+  type LiveGiftTransaction {
+    id: ID!
+    streamId: String!
+  }
 
+  input LiveGiftTransactionFilterInput {
+    senderId: ID
+    astrologerId: ID
+    streamId: ID
+    giftId: ID
+    status: String
+    startDate: String
+    endDate: String
+  }
 
-#--------END LIVE STREAMING---------
+  type LiveGiftTransactionPagination {
+    data: [LiveGiftTransaction!]!
+    totalCount: Int!
+    currentPage: Int!
+    totalPages: Int!
+    totalCoins: Float!
+  }
+
+  #--------END LIVE STREAMING---------
   type Query {
     # puja services
     pujaServices: [PujaService!]!
