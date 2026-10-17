@@ -10589,29 +10589,43 @@ export const resolvers = {
         },
       });
     },
+    
     adminDeleteScheduledLive: async (_, { id }, context) => {
-      const { prisma } = context;
+  const { prisma } = context;
 
-      await checkPermission(context, "liveStreams.delete");
+  try {
+    // 1. Check admin permission
+    await checkPermission(context, "liveStreams.delete");
 
-      const existingLive = await prisma.liveStream.findUnique({
-        where: { id },
-      });
+    // 2. Find the live stream
+    const existingLive = await prisma.liveStream.findUnique({
+      where: { id },
+    });
 
-      if (!existingLive) {
-        throw new Error("Live stream not found");
-      }
+    if (!existingLive) {
+      throw new Error("Live stream not found");
+    }
 
-      if (existingLive.status !== "SCHEDULED") {
-        throw new Error("Only scheduled live streams can be deleted");
-      }
+    // 3. Allow deletion of scheduled or running streams
+    if (!["SCHEDULED", "LIVE"].includes(existingLive.status)) {
+      throw new Error(
+        "Only scheduled or running live streams can be deleted"
+      );
+    }
 
-      await prisma.liveStream.delete({
-        where: { id },
-      });
+    // 4. Delete the live stream
+    await prisma.liveStream.delete({
+      where: { id },
+    });
 
-      return true;
-    },
+    // 5. Return success
+    return true;
+  } catch (error) {
+    console.error("adminDeleteScheduledLive error:", error);
+
+    throw new Error(error.message || "Failed to delete live stream");
+  }
+},
   },
 
   Blog: {
