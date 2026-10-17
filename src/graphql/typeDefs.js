@@ -2420,6 +2420,31 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
   }
+  #-------start for live streaming-------
+  type LiveStream {
+  id: ID!
+  astrologerId: ID!
+  title: String!
+  channelName: String!
+  chatRoomId: String
+  status: LiveStatus!
+  scheduledAt: String
+  scheduledEndAt: String
+  createdAt: String
+  startedAt: String
+  endedAt: String
+  totalViews: Int
+
+  astrologer: LiveStreamAstrologer
+}
+
+type LiveStreamAstrologer {
+  id: ID!
+  name: String
+  displayName: String
+  profilePic: String
+}
+  #--------ENd LIVE STREAM---------
 
   type Query {
     # puja services
@@ -2661,6 +2686,10 @@ const typeDefs = gql`
       limit: Int
       bookingStatus: String
     ): AdminServiceBookingReportResponse!
+
+
+  getAllScheduledLives: [LiveStream!]!
+
   }
 
   type Mutation {
@@ -3048,6 +3077,8 @@ const typeDefs = gql`
     updatePujaReviewStatus(id: ID!, status: PujaReviewStatus!): PujaReview!
 
     deletePujaReview(id: ID!): Boolean!
+    adminDeleteScheduledLive(id: ID!): Boolean!
+    
   }
 `;
 
