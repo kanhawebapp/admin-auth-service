@@ -2013,23 +2013,19 @@ model PujaPaymentOrder {
   id String @id @default(uuid())
 
   userId String
-  user User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   bookingId String
-  booking PujaBooking @relation(fields: [bookingId], references: [id])
+  booking   PujaBooking @relation(fields: [bookingId], references: [id])
 
   razorpayOrderId String? @unique
 
-  totalAmount Float
-  walletAmount Float @default(0)
+  totalAmount   Float
+  walletAmount  Float @default(0)
   payableAmount Float
 
   couponId String?
-  coupon Coupon? @relation(
-    "CouponPujaPaymentOrders",
-    fields: [couponId],
-    references: [id]
-  )
+  coupon   Coupon? @relation("CouponPujaPaymentOrders", fields: [couponId], references: [id])
 
   discount Float @default(0)
   cashback Float @default(0)
@@ -2041,7 +2037,6 @@ model PujaPaymentOrder {
 
   @@index([userId])
   @@index([bookingId])
-  @@index([razorpayOrderId])
   @@index([status])
   @@index([couponId])
 }
