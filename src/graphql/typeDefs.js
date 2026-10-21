@@ -520,6 +520,9 @@ const typeDefs = gql`
   enum TransactionType {
     CREDIT
     DEBIT
+    REFUND
+    CASHBACK
+    DISCOUNT
   }
   type WalletResponse {
     success: Boolean!

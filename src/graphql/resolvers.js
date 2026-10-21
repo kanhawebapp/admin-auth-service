@@ -2084,136 +2084,203 @@ export const resolvers = {
       });
     },
     getUserWalletTransactions: async (
-      _,
-      {
-        page = 1,
-        limit = 20,
-        type,
-        amount,
-        mobile,
-        userId,
-        filterType,
-        startDate,
-        endDate,
-        onlyRecharge = false,
+  _,
+  {
+    page = 1,
+    limit = 20,
+    type,
+    amount,
+    mobile,
+    userId,
+    filterType,
+    startDate,
+    endDate,
+    onlyRecharge = false,
+  },
+) => {
+  try {
+    const skip = (page - 1) * limit;
+
+    // =========================================================
+    // 1. BUILD WHERE CLAUSE
+    // =========================================================
+
+    const whereClause = {
+      userWalletId: {
+        not: null,
       },
-    ) => {
-      try {
-        const skip = (page - 1) * limit;
+    };
 
-        // =========================================================
-        // 1. BUILD WHERE CLAUSE
-        // =========================================================
+    if (onlyRecharge) {
+      whereClause.rechargePackId = {
+        not: null,
+      };
+    }
 
-        const whereClause = {
-          userWalletId: {
-            not: null,
+    // Supports CREDIT, DEBIT, REFUND, CASHBACK, DISCOUNT
+    if (type) {
+      whereClause.type = type.toUpperCase();
+    }
+
+    if (amount !== undefined && amount !== null) {
+      whereClause.amount = Number(amount);
+    }
+
+    if (userId || mobile) {
+      whereClause.userWallet = {};
+
+      if (userId) {
+        whereClause.userWallet.userId = userId;
+      }
+
+      if (mobile) {
+        whereClause.userWallet.user = {
+          mobile: {
+            contains: mobile,
           },
         };
+      }
+    }
 
-        if (onlyRecharge) {
-          whereClause.rechargePackId = {
-            not: null,
-          };
-        }
+    // =========================================================
+    // 2. DATE FILTER
+    // =========================================================
 
-        if (type) {
-          whereClause.type = type.toUpperCase();
-        }
+    const now = new Date();
 
-        if (amount !== undefined && amount !== null) {
-          whereClause.amount = Number(amount);
-        }
+    if (filterType === "WEEK") {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - 7);
 
-        if (userId || mobile) {
-          whereClause.userWallet = {};
+      whereClause.createdAt = {
+        gte: weekStart,
+        lte: now,
+      };
+    }
 
-          if (userId) {
-            whereClause.userWallet.userId = userId;
-          }
+    if (filterType === "MONTH") {
+      const monthStart = new Date(now);
+      monthStart.setMonth(now.getMonth() - 1);
 
-          if (mobile) {
-            whereClause.userWallet.user = {
-              mobile: {
-                contains: mobile,
-              },
-            };
-          }
-        }
+      whereClause.createdAt = {
+        gte: monthStart,
+        lte: now,
+      };
+    }
 
-        // =========================================================
-        // 2. DATE FILTER
-        // =========================================================
+    if (filterType === "YEAR") {
+      const yearStart = new Date(now);
+      yearStart.setFullYear(now.getFullYear() - 1);
 
-        const now = new Date();
+      whereClause.createdAt = {
+        gte: yearStart,
+        lte: now,
+      };
+    }
 
-        if (filterType === "WEEK") {
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - 7);
+    if (filterType === "CUSTOM" && startDate && endDate) {
+      const customStartDate = new Date(startDate);
+      const customEndDate = new Date(endDate);
 
-          whereClause.createdAt = {
-            gte: weekStart,
-            lte: now,
-          };
-        }
+      if (
+        Number.isNaN(customStartDate.getTime()) ||
+        Number.isNaN(customEndDate.getTime())
+      ) {
+        throw new Error("Invalid custom date range");
+      }
 
-        if (filterType === "MONTH") {
-          const monthStart = new Date(now);
-          monthStart.setMonth(now.getMonth() - 1);
+      if (customStartDate > customEndDate) {
+        throw new Error("startDate cannot be after endDate");
+      }
 
-          whereClause.createdAt = {
-            gte: monthStart,
-            lte: now,
-          };
-        }
+      whereClause.createdAt = {
+        gte: customStartDate,
+        lte: customEndDate,
+      };
+    }
 
-        if (filterType === "YEAR") {
-          const yearStart = new Date(now);
-          yearStart.setFullYear(now.getFullYear() - 1);
+    // =========================================================
+    // 3. GET PAGINATED TRANSACTIONS
+    // =========================================================
 
-          whereClause.createdAt = {
-            gte: yearStart,
-            lte: now,
-          };
-        }
+    const [data, totalCount] = await Promise.all([
+      prisma.walletTransaction.findMany({
+        where: whereClause,
 
-        if (filterType === "CUSTOM" && startDate && endDate) {
-          whereClause.createdAt = {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          };
-        }
-
-        // =========================================================
-        // 3. GET PAGINATED TRANSACTIONS
-        // =========================================================
-
-        const [data, totalCount] = await Promise.all([
-          prisma.walletTransaction.findMany({
-            where: whereClause,
-
+        include: {
+          userWallet: {
             include: {
-              userWallet: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      mobile: true,
-                    },
-                  },
-                },
-              },
-
-              rechargePack: true,
-
-              payment: true,
-
-              session: {
+              user: {
                 select: {
                   id: true,
+                  name: true,
+                  mobile: true,
                 },
               },
+            },
+          },
+
+          rechargePack: true,
+
+          payment: true,
+
+          session: {
+            select: {
+              id: true,
+            },
+          },
+        },
+
+        orderBy: [
+          {
+            createdAt: "desc",
+          },
+          {
+            id: "desc",
+          },
+        ],
+
+        skip,
+        take: limit,
+      }),
+
+      prisma.walletTransaction.count({
+        where: whereClause,
+      }),
+    ]);
+
+    // =========================================================
+    // 4. GET WALLET IDS
+    // =========================================================
+
+    const walletIds = [
+      ...new Set(
+        data
+          .map((transaction) => transaction.userWalletId)
+          .filter(Boolean),
+      ),
+    ];
+
+    // =========================================================
+    // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
+    // =========================================================
+
+    const allWalletTransactions =
+      walletIds.length > 0
+        ? await prisma.walletTransaction.findMany({
+            where: {
+              userWalletId: {
+                in: walletIds,
+              },
+            },
+
+            select: {
+              id: true,
+              userWalletId: true,
+              type: true,
+              coins: true,
+              updatedBalance: true,
+              createdAt: true,
             },
 
             orderBy: [
@@ -2224,210 +2291,196 @@ export const resolvers = {
                 id: "desc",
               },
             ],
+          })
+        : [];
 
-            skip,
-            take: limit,
-          }),
+    // =========================================================
+    // 6. GET CURRENT WALLET BALANCE
+    // =========================================================
 
-          prisma.walletTransaction.count({
-            where: whereClause,
-          }),
-        ]);
-
-        // =========================================================
-        // 4. GET WALLET IDS
-        // =========================================================
-
-        const walletIds = [
-          ...new Set(
-            data.map((transaction) => transaction.userWalletId).filter(Boolean),
-          ),
-        ];
-
-        // =========================================================
-        // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
-        //
-        // IMPORTANT:
-        // Include updatedBalance from DB
-        // =========================================================
-
-        const allWalletTransactions =
-          walletIds.length > 0
-            ? await prisma.walletTransaction.findMany({
-                where: {
-                  userWalletId: {
-                    in: walletIds,
-                  },
-                },
-
-                select: {
-                  id: true,
-                  userWalletId: true,
-                  type: true,
-                  coins: true,
-                  updatedBalance: true,
-                  createdAt: true,
-                },
-
-                orderBy: [
-                  {
-                    createdAt: "desc",
-                  },
-                  {
-                    id: "desc",
-                  },
-                ],
-              })
-            : [];
-
-        // =========================================================
-        // 6. GET CURRENT WALLET BALANCE
-        // =========================================================
-
-        const wallets = walletIds.length
-          ? await prisma.userWallet.findMany({
-              where: {
-                id: {
-                  in: walletIds,
-                },
+    const wallets =
+      walletIds.length > 0
+        ? await prisma.userWallet.findMany({
+            where: {
+              id: {
+                in: walletIds,
               },
+            },
 
-              select: {
-                id: true,
-                balanceCoins: true,
-              },
-            })
-          : [];
+            select: {
+              id: true,
+              balanceCoins: true,
+            },
+          })
+        : [];
 
-        const currentBalanceMap = new Map();
+    const currentBalanceMap = new Map();
 
-        wallets.forEach((wallet) => {
-          currentBalanceMap.set(wallet.id, Number(wallet.balanceCoins || 0));
-        });
+    wallets.forEach((wallet) => {
+      currentBalanceMap.set(
+        wallet.id,
+        Number(wallet.balanceCoins || 0),
+      );
+    });
 
-        // =========================================================
-        // 7. GROUP TRANSACTIONS BY WALLET
-        // =========================================================
+    // =========================================================
+    // 7. GROUP TRANSACTIONS BY WALLET
+    // =========================================================
 
-        const transactionsByWallet = new Map();
+    const transactionsByWallet = new Map();
 
-        allWalletTransactions.forEach((transaction) => {
-          if (!transactionsByWallet.has(transaction.userWalletId)) {
-            transactionsByWallet.set(transaction.userWalletId, []);
-          }
-
-          transactionsByWallet.get(transaction.userWalletId).push(transaction);
-        });
-
-        // =========================================================
-        // 8. CALCULATE ONLY MISSING HISTORICAL BALANCES
-        // =========================================================
-
-        const updatedBalanceMap = new Map();
-
-        transactionsByWallet.forEach((transactions, walletId) => {
-          let runningBalance = currentBalanceMap.get(walletId) || 0;
-
-          /*
-           * Transactions are DESC:
-           *
-           * latest
-           * ↓
-           * oldest
-           */
-
-          for (const transaction of transactions) {
-            // -----------------------------------------------------
-            // CASE 1:
-            // Database already has historical balance
-            // -----------------------------------------------------
-
-            if (
-              transaction.updatedBalance !== null &&
-              transaction.updatedBalance !== undefined
-            ) {
-              const storedBalance = Number(transaction.updatedBalance);
-
-              updatedBalanceMap.set(transaction.id, storedBalance);
-
-              /*
-               * Very important:
-               *
-               * This becomes our historical anchor.
-               *
-               * Do not continue calculating backwards from
-               * potentially inconsistent legacy data.
-               */
-
-              runningBalance = storedBalance;
-
-              continue;
-            }
-
-            // -----------------------------------------------------
-            // CASE 2:
-            // updatedBalance is NULL
-            //
-            // Calculate balance AFTER this transaction
-            // -----------------------------------------------------
-
-            updatedBalanceMap.set(transaction.id, runningBalance);
-
-            const coins = Number(transaction.coins || 0);
-
-            const transactionType = String(
-              transaction.type || "",
-            ).toUpperCase();
-
-            // CREDIT / REFUND increase wallet
-            if (
-              transactionType === "CREDIT" ||
-              transactionType === "REFUND" ||
-              transactionType === "RECHARGE"
-            ) {
-              runningBalance -= coins;
-            }
-
-            // DEBIT decreases wallet
-            else if (
-              transactionType === "DEBIT" ||
-              transactionType === "CHAT" ||
-              transactionType === "CALL" ||
-              transactionType === "SESSION"
-            ) {
-              runningBalance += coins;
-            }
-          }
-        });
-
-        // =========================================================
-        // 9. FINAL RESPONSE
-        // =========================================================
-
-        const finalData = data.map((transaction) => ({
-          ...transaction,
-
-          updatedBalance:
-            updatedBalanceMap.get(transaction.id) ??
-            Number(transaction.userWallet?.balanceCoins || 0),
-        }));
-
-        // =========================================================
-        // 10. RETURN
-        // =========================================================
-
-        return {
-          data: finalData,
-          totalCount,
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-        };
-      } catch (err) {
-        console.error("getUserWalletTransactionss error:", err);
-
-        throw new Error(err.message || "Failed to fetch transactions");
+    allWalletTransactions.forEach((transaction) => {
+      if (!transactionsByWallet.has(transaction.userWalletId)) {
+        transactionsByWallet.set(transaction.userWalletId, []);
       }
-    },
+
+      transactionsByWallet
+        .get(transaction.userWalletId)
+        .push(transaction);
+    });
+
+    // =========================================================
+    // 8. CALCULATE HISTORICAL BALANCES
+    // =========================================================
+
+    const updatedBalanceMap = new Map();
+
+    transactionsByWallet.forEach((transactions, walletId) => {
+      let runningBalance = currentBalanceMap.get(walletId) || 0;
+
+      /*
+       * Transactions are DESC:
+       *
+       * Latest
+       *   ↓
+       * Oldest
+       *
+       * runningBalance represents the balance AFTER
+       * the current transaction.
+       */
+
+      for (const transaction of transactions) {
+        // -----------------------------------------------------
+        // CASE 1: USE EXISTING DATABASE BALANCE
+        // -----------------------------------------------------
+
+        if (
+          transaction.updatedBalance !== null &&
+          transaction.updatedBalance !== undefined
+        ) {
+          const storedBalance = Number(
+            transaction.updatedBalance,
+          );
+
+          updatedBalanceMap.set(
+            transaction.id,
+            storedBalance,
+          );
+
+          // Existing balance becomes the historical anchor.
+          runningBalance = storedBalance;
+
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // CASE 2: CALCULATE MISSING HISTORICAL BALANCE
+        // -----------------------------------------------------
+
+        updatedBalanceMap.set(
+          transaction.id,
+          runningBalance,
+        );
+
+        const coins = Number(transaction.coins || 0);
+
+        const transactionType = String(
+          transaction.type || "",
+        ).toUpperCase();
+
+        // -----------------------------------------------------
+        // TRANSACTIONS THAT INCREASE WALLET BALANCE
+        // -----------------------------------------------------
+        //
+        // Moving backwards in time:
+        // Subtract the credited coins.
+        //
+        // Includes CASHBACK.
+        // -----------------------------------------------------
+
+        if (
+          transactionType === "CREDIT" ||
+          transactionType === "REFUND" ||
+          transactionType === "CASHBACK" ||
+          transactionType === "RECHARGE"
+        ) {
+          runningBalance -= coins;
+        }
+
+        // -----------------------------------------------------
+        // TRANSACTIONS THAT DECREASE WALLET BALANCE
+        // -----------------------------------------------------
+        //
+        // Moving backwards in time:
+        // Add the deducted coins back.
+        // -----------------------------------------------------
+
+        else if (
+          transactionType === "DEBIT" ||
+          transactionType === "CHAT" ||
+          transactionType === "CALL" ||
+          transactionType === "SESSION"
+        ) {
+          runningBalance += coins;
+        }
+
+        // -----------------------------------------------------
+        // DISCOUNT
+        // -----------------------------------------------------
+        //
+        // DISCOUNT is treated as metadata here because
+        // your existing recharge logic records a DISCOUNT
+        // transaction without changing the wallet balance.
+        //
+        // If your application deducts or credits coins
+        // for DISCOUNT transactions, adjust this behavior.
+        // -----------------------------------------------------
+      }
+    });
+
+    // =========================================================
+    // 9. FINAL RESPONSE
+    // =========================================================
+
+    const finalData = data.map((transaction) => ({
+      ...transaction,
+
+      updatedBalance:
+        updatedBalanceMap.get(transaction.id) ??
+        Number(transaction.userWallet?.balanceCoins || 0),
+    }));
+
+    // =========================================================
+    // 10. RETURN PAGINATED RESULT
+    // =========================================================
+
+    return {
+      data: finalData,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+    };
+  } catch (err) {
+    console.error(
+      "getUserWalletTransactions error:",
+      err,
+    );
+
+    throw new Error(
+      err.message || "Failed to fetch transactions",
+    );
+  }
+},
     // getAstrologerWalletTransactions: async (
     //   _,
     //   {
