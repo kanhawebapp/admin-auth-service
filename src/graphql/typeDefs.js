@@ -2346,17 +2346,43 @@ const typeDefs = gql`
     # Actual amount paid by user
     finalPaidAmount: Float!
   }
+type AdminPujaBookingReportItem {
+  id: ID!
 
-  type AdminServiceBookingReportResponse {
-    success: Boolean!
-    total: Int!
-    currentPage: Int!
-    totalPages: Int!
-    limit: Int!
-    data: [AdminServiceBookingReport!]!
-  }
+  userId: String!
+  userName: String
+  userMobile: String
 
+  pujaId: String!
+  pujaName: String
+
+  mantraOptionId: String
+  mantraOptionName: String
+
+  quantity: Int!
+  unitPrice: Float!
+  totalAmount: Float!
+
+  paymentStatus: PaymentStatus!
+  bookingStatus: BookingStatus!
+
+  bookingDate: String
+}
+
+type AdminPujaBookingReport {
+  success: Boolean!
+  total: Int!
+  currentPage: Int!
+  totalPages: Int!
+  limit: Int!
+  data: [AdminPujaBookingReportItem!]!
+}
   #Puja servicess
+  type AdminPujaBookingReport {
+  data: [PujaBooking!]!
+  total: Int!
+  totalPages: Int!
+}
   enum PujaReviewStatus {
     PENDING
     APPROVED
@@ -2531,6 +2557,12 @@ const typeDefs = gql`
   #--------END LIVE STREAMING---------
   type Query {
     # puja services
+      getAdminPujaBookingReport(
+    page: Int = 1
+    limit: Int = 20
+    paymentStatus: PaymentStatus
+    bookingStatus: BookingStatus
+  ): AdminPujaBookingReport!
     pujaServices: [PujaService!]!
 
     pujaService(id: ID, slug: String): PujaService
