@@ -2348,7 +2348,6 @@ const typeDefs = gql`
   }
 type AdminPujaBookingReportItem {
   id: ID!
-
   userId: String!
   userName: String
   userMobile: String
@@ -2365,7 +2364,6 @@ type AdminPujaBookingReportItem {
 
   paymentStatus: PaymentStatus!
   bookingStatus: BookingStatus!
-
   bookingDate: String
 }
 
@@ -2378,11 +2376,7 @@ type AdminPujaBookingReport {
   data: [AdminPujaBookingReportItem!]!
 }
   #Puja servicess
-  type AdminPujaBookingReport {
-  data: [PujaBooking!]!
-  total: Int!
-  totalPages: Int!
-}
+
   enum PujaReviewStatus {
     PENDING
     APPROVED
