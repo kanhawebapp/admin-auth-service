@@ -224,8 +224,77 @@ const pujaInclude = {
 
 const optionalText = (value) => (value === "" ? null : value);
 
-const cleanMantras = (items = []) =>
-  items.map((name) => name.trim()).filter(Boolean);
+
+const cleanMantraOptions = (options = []) => {
+  if (!Array.isArray(options)) return [];
+
+  return options
+    .filter((option) => option?.name?.trim())
+    .map((option, index) => {
+      const name = option.name.trim();
+      const originalPrice = Number(option.originalPrice);
+      const offerPrice = Number(option.offerPrice);
+      const sortOrder = Number(option.sortOrder ?? index + 1);
+
+      if (
+        !Number.isFinite(originalPrice) ||
+        !Number.isFinite(offerPrice) ||
+        originalPrice < 0 ||
+        offerPrice < 0
+      ) {
+        throw new GraphQLError(
+          `Invalid pricing for mantra option "${name}".`,
+          { extensions: { code: "BAD_USER_INPUT" } }
+        );
+      }
+
+      if (offerPrice > originalPrice) {
+        throw new GraphQLError(
+          `Offer price cannot exceed original price for "${name}".`,
+          { extensions: { code: "BAD_USER_INPUT" } }
+        );
+      }
+
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+        throw new GraphQLError(
+          `Invalid sort order for mantra option "${name}".`,
+          { extensions: { code: "BAD_USER_INPUT" } }
+        );
+      }
+
+      return {
+        name,
+        originalPrice,
+        offerPrice,
+        sortOrder,
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+};
+
+const getPujaPricing = (mantraOptions, args) => {
+  if (!mantraOptions.length) {
+    throw new GraphQLError(
+      "At least one valid mantra option with pricing is required.",
+      { extensions: { code: "BAD_USER_INPUT" } }
+    );
+  }
+
+  const firstOption = mantraOptions[0];
+
+  const price = firstOption.offerPrice;
+  const mrp = firstOption.originalPrice;
+
+  const discount =
+    mrp > 0
+      ? Math.round(((mrp - price) / mrp) * 100 * 100) / 100
+      : 0;
+
+  validatePrice(price, mrp, discount);
+
+  return { price, mrp, discount };
+};
+
 
 const cleanFAQs = (items = []) =>
   items
@@ -2084,203 +2153,151 @@ export const resolvers = {
       });
     },
     getUserWalletTransactions: async (
-  _,
-  {
-    page = 1,
-    limit = 20,
-    type,
-    amount,
-    mobile,
-    userId,
-    filterType,
-    startDate,
-    endDate,
-    onlyRecharge = false,
-  },
-) => {
-  try {
-    const skip = (page - 1) * limit;
-
-    // =========================================================
-    // 1. BUILD WHERE CLAUSE
-    // =========================================================
-
-    const whereClause = {
-      userWalletId: {
-        not: null,
+      _,
+      {
+        page = 1,
+        limit = 20,
+        type,
+        amount,
+        mobile,
+        userId,
+        filterType,
+        startDate,
+        endDate,
+        onlyRecharge = false,
       },
-    };
+    ) => {
+      try {
+        const skip = (page - 1) * limit;
 
-    if (onlyRecharge) {
-      whereClause.rechargePackId = {
-        not: null,
-      };
-    }
+        // =========================================================
+        // 1. BUILD WHERE CLAUSE
+        // =========================================================
 
-    // Supports CREDIT, DEBIT, REFUND, CASHBACK, DISCOUNT
-    if (type) {
-      whereClause.type = type.toUpperCase();
-    }
-
-    if (amount !== undefined && amount !== null) {
-      whereClause.amount = Number(amount);
-    }
-
-    if (userId || mobile) {
-      whereClause.userWallet = {};
-
-      if (userId) {
-        whereClause.userWallet.userId = userId;
-      }
-
-      if (mobile) {
-        whereClause.userWallet.user = {
-          mobile: {
-            contains: mobile,
+        const whereClause = {
+          userWalletId: {
+            not: null,
           },
         };
-      }
-    }
 
-    // =========================================================
-    // 2. DATE FILTER
-    // =========================================================
+        if (onlyRecharge) {
+          whereClause.rechargePackId = {
+            not: null,
+          };
+        }
 
-    const now = new Date();
+        // Supports CREDIT, DEBIT, REFUND, CASHBACK, DISCOUNT
+        if (type) {
+          whereClause.type = type.toUpperCase();
+        }
 
-    if (filterType === "WEEK") {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - 7);
+        if (amount !== undefined && amount !== null) {
+          whereClause.amount = Number(amount);
+        }
 
-      whereClause.createdAt = {
-        gte: weekStart,
-        lte: now,
-      };
-    }
+        if (userId || mobile) {
+          whereClause.userWallet = {};
 
-    if (filterType === "MONTH") {
-      const monthStart = new Date(now);
-      monthStart.setMonth(now.getMonth() - 1);
+          if (userId) {
+            whereClause.userWallet.userId = userId;
+          }
 
-      whereClause.createdAt = {
-        gte: monthStart,
-        lte: now,
-      };
-    }
+          if (mobile) {
+            whereClause.userWallet.user = {
+              mobile: {
+                contains: mobile,
+              },
+            };
+          }
+        }
 
-    if (filterType === "YEAR") {
-      const yearStart = new Date(now);
-      yearStart.setFullYear(now.getFullYear() - 1);
+        // =========================================================
+        // 2. DATE FILTER
+        // =========================================================
 
-      whereClause.createdAt = {
-        gte: yearStart,
-        lte: now,
-      };
-    }
+        const now = new Date();
 
-    if (filterType === "CUSTOM" && startDate && endDate) {
-      const customStartDate = new Date(startDate);
-      const customEndDate = new Date(endDate);
+        if (filterType === "WEEK") {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - 7);
 
-      if (
-        Number.isNaN(customStartDate.getTime()) ||
-        Number.isNaN(customEndDate.getTime())
-      ) {
-        throw new Error("Invalid custom date range");
-      }
+          whereClause.createdAt = {
+            gte: weekStart,
+            lte: now,
+          };
+        }
 
-      if (customStartDate > customEndDate) {
-        throw new Error("startDate cannot be after endDate");
-      }
+        if (filterType === "MONTH") {
+          const monthStart = new Date(now);
+          monthStart.setMonth(now.getMonth() - 1);
 
-      whereClause.createdAt = {
-        gte: customStartDate,
-        lte: customEndDate,
-      };
-    }
+          whereClause.createdAt = {
+            gte: monthStart,
+            lte: now,
+          };
+        }
 
-    // =========================================================
-    // 3. GET PAGINATED TRANSACTIONS
-    // =========================================================
+        if (filterType === "YEAR") {
+          const yearStart = new Date(now);
+          yearStart.setFullYear(now.getFullYear() - 1);
 
-    const [data, totalCount] = await Promise.all([
-      prisma.walletTransaction.findMany({
-        where: whereClause,
+          whereClause.createdAt = {
+            gte: yearStart,
+            lte: now,
+          };
+        }
 
-        include: {
-          userWallet: {
+        if (filterType === "CUSTOM" && startDate && endDate) {
+          const customStartDate = new Date(startDate);
+          const customEndDate = new Date(endDate);
+
+          if (
+            Number.isNaN(customStartDate.getTime()) ||
+            Number.isNaN(customEndDate.getTime())
+          ) {
+            throw new Error("Invalid custom date range");
+          }
+
+          if (customStartDate > customEndDate) {
+            throw new Error("startDate cannot be after endDate");
+          }
+
+          whereClause.createdAt = {
+            gte: customStartDate,
+            lte: customEndDate,
+          };
+        }
+
+        // =========================================================
+        // 3. GET PAGINATED TRANSACTIONS
+        // =========================================================
+
+        const [data, totalCount] = await Promise.all([
+          prisma.walletTransaction.findMany({
+            where: whereClause,
+
             include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  mobile: true,
+              userWallet: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      mobile: true,
+                    },
+                  },
                 },
               },
-            },
-          },
 
-          rechargePack: true,
+              rechargePack: true,
 
-          payment: true,
+              payment: true,
 
-          session: {
-            select: {
-              id: true,
-            },
-          },
-        },
-
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-          {
-            id: "desc",
-          },
-        ],
-
-        skip,
-        take: limit,
-      }),
-
-      prisma.walletTransaction.count({
-        where: whereClause,
-      }),
-    ]);
-
-    // =========================================================
-    // 4. GET WALLET IDS
-    // =========================================================
-
-    const walletIds = [
-      ...new Set(
-        data
-          .map((transaction) => transaction.userWalletId)
-          .filter(Boolean),
-      ),
-    ];
-
-    // =========================================================
-    // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
-    // =========================================================
-
-    const allWalletTransactions =
-      walletIds.length > 0
-        ? await prisma.walletTransaction.findMany({
-            where: {
-              userWalletId: {
-                in: walletIds,
+              session: {
+                select: {
+                  id: true,
+                },
               },
-            },
-
-            select: {
-              id: true,
-              userWalletId: true,
-              type: true,
-              coins: true,
-              updatedBalance: true,
-              createdAt: true,
             },
 
             orderBy: [
@@ -2291,196 +2308,227 @@ export const resolvers = {
                 id: "desc",
               },
             ],
-          })
-        : [];
 
-    // =========================================================
-    // 6. GET CURRENT WALLET BALANCE
-    // =========================================================
+            skip,
+            take: limit,
+          }),
 
-    const wallets =
-      walletIds.length > 0
-        ? await prisma.userWallet.findMany({
-            where: {
-              id: {
-                in: walletIds,
-              },
-            },
+          prisma.walletTransaction.count({
+            where: whereClause,
+          }),
+        ]);
 
-            select: {
-              id: true,
-              balanceCoins: true,
-            },
-          })
-        : [];
+        // =========================================================
+        // 4. GET WALLET IDS
+        // =========================================================
 
-    const currentBalanceMap = new Map();
+        const walletIds = [
+          ...new Set(
+            data.map((transaction) => transaction.userWalletId).filter(Boolean),
+          ),
+        ];
 
-    wallets.forEach((wallet) => {
-      currentBalanceMap.set(
-        wallet.id,
-        Number(wallet.balanceCoins || 0),
-      );
-    });
+        // =========================================================
+        // 5. GET ALL TRANSACTIONS FOR THESE WALLETS
+        // =========================================================
 
-    // =========================================================
-    // 7. GROUP TRANSACTIONS BY WALLET
-    // =========================================================
+        const allWalletTransactions =
+          walletIds.length > 0
+            ? await prisma.walletTransaction.findMany({
+                where: {
+                  userWalletId: {
+                    in: walletIds,
+                  },
+                },
 
-    const transactionsByWallet = new Map();
+                select: {
+                  id: true,
+                  userWalletId: true,
+                  type: true,
+                  coins: true,
+                  updatedBalance: true,
+                  createdAt: true,
+                },
 
-    allWalletTransactions.forEach((transaction) => {
-      if (!transactionsByWallet.has(transaction.userWalletId)) {
-        transactionsByWallet.set(transaction.userWalletId, []);
+                orderBy: [
+                  {
+                    createdAt: "desc",
+                  },
+                  {
+                    id: "desc",
+                  },
+                ],
+              })
+            : [];
+
+        // =========================================================
+        // 6. GET CURRENT WALLET BALANCE
+        // =========================================================
+
+        const wallets =
+          walletIds.length > 0
+            ? await prisma.userWallet.findMany({
+                where: {
+                  id: {
+                    in: walletIds,
+                  },
+                },
+
+                select: {
+                  id: true,
+                  balanceCoins: true,
+                },
+              })
+            : [];
+
+        const currentBalanceMap = new Map();
+
+        wallets.forEach((wallet) => {
+          currentBalanceMap.set(wallet.id, Number(wallet.balanceCoins || 0));
+        });
+
+        // =========================================================
+        // 7. GROUP TRANSACTIONS BY WALLET
+        // =========================================================
+
+        const transactionsByWallet = new Map();
+
+        allWalletTransactions.forEach((transaction) => {
+          if (!transactionsByWallet.has(transaction.userWalletId)) {
+            transactionsByWallet.set(transaction.userWalletId, []);
+          }
+
+          transactionsByWallet.get(transaction.userWalletId).push(transaction);
+        });
+
+        // =========================================================
+        // 8. CALCULATE HISTORICAL BALANCES
+        // =========================================================
+
+        const updatedBalanceMap = new Map();
+
+        transactionsByWallet.forEach((transactions, walletId) => {
+          let runningBalance = currentBalanceMap.get(walletId) || 0;
+
+          /*
+           * Transactions are DESC:
+           *
+           * Latest
+           *   ↓
+           * Oldest
+           *
+           * runningBalance represents the balance AFTER
+           * the current transaction.
+           */
+
+          for (const transaction of transactions) {
+            // -----------------------------------------------------
+            // CASE 1: USE EXISTING DATABASE BALANCE
+            // -----------------------------------------------------
+
+            if (
+              transaction.updatedBalance !== null &&
+              transaction.updatedBalance !== undefined
+            ) {
+              const storedBalance = Number(transaction.updatedBalance);
+
+              updatedBalanceMap.set(transaction.id, storedBalance);
+
+              // Existing balance becomes the historical anchor.
+              runningBalance = storedBalance;
+
+              continue;
+            }
+
+            // -----------------------------------------------------
+            // CASE 2: CALCULATE MISSING HISTORICAL BALANCE
+            // -----------------------------------------------------
+
+            updatedBalanceMap.set(transaction.id, runningBalance);
+
+            const coins = Number(transaction.coins || 0);
+
+            const transactionType = String(
+              transaction.type || "",
+            ).toUpperCase();
+
+            // -----------------------------------------------------
+            // TRANSACTIONS THAT INCREASE WALLET BALANCE
+            // -----------------------------------------------------
+            //
+            // Moving backwards in time:
+            // Subtract the credited coins.
+            //
+            // Includes CASHBACK.
+            // -----------------------------------------------------
+
+            if (
+              transactionType === "CREDIT" ||
+              transactionType === "REFUND" ||
+              transactionType === "CASHBACK" ||
+              transactionType === "RECHARGE"
+            ) {
+              runningBalance -= coins;
+            }
+
+            // -----------------------------------------------------
+            // TRANSACTIONS THAT DECREASE WALLET BALANCE
+            // -----------------------------------------------------
+            //
+            // Moving backwards in time:
+            // Add the deducted coins back.
+            // -----------------------------------------------------
+            else if (
+              transactionType === "DEBIT" ||
+              transactionType === "CHAT" ||
+              transactionType === "CALL" ||
+              transactionType === "SESSION"
+            ) {
+              runningBalance += coins;
+            }
+
+            // -----------------------------------------------------
+            // DISCOUNT
+            // -----------------------------------------------------
+            //
+            // DISCOUNT is treated as metadata here because
+            // your existing recharge logic records a DISCOUNT
+            // transaction without changing the wallet balance.
+            //
+            // If your application deducts or credits coins
+            // for DISCOUNT transactions, adjust this behavior.
+            // -----------------------------------------------------
+          }
+        });
+
+        // =========================================================
+        // 9. FINAL RESPONSE
+        // =========================================================
+
+        const finalData = data.map((transaction) => ({
+          ...transaction,
+
+          updatedBalance:
+            updatedBalanceMap.get(transaction.id) ??
+            Number(transaction.userWallet?.balanceCoins || 0),
+        }));
+
+        // =========================================================
+        // 10. RETURN PAGINATED RESULT
+        // =========================================================
+
+        return {
+          data: finalData,
+          totalCount,
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+        };
+      } catch (err) {
+        console.error("getUserWalletTransactions error:", err);
+
+        throw new Error(err.message || "Failed to fetch transactions");
       }
-
-      transactionsByWallet
-        .get(transaction.userWalletId)
-        .push(transaction);
-    });
-
-    // =========================================================
-    // 8. CALCULATE HISTORICAL BALANCES
-    // =========================================================
-
-    const updatedBalanceMap = new Map();
-
-    transactionsByWallet.forEach((transactions, walletId) => {
-      let runningBalance = currentBalanceMap.get(walletId) || 0;
-
-      /*
-       * Transactions are DESC:
-       *
-       * Latest
-       *   ↓
-       * Oldest
-       *
-       * runningBalance represents the balance AFTER
-       * the current transaction.
-       */
-
-      for (const transaction of transactions) {
-        // -----------------------------------------------------
-        // CASE 1: USE EXISTING DATABASE BALANCE
-        // -----------------------------------------------------
-
-        if (
-          transaction.updatedBalance !== null &&
-          transaction.updatedBalance !== undefined
-        ) {
-          const storedBalance = Number(
-            transaction.updatedBalance,
-          );
-
-          updatedBalanceMap.set(
-            transaction.id,
-            storedBalance,
-          );
-
-          // Existing balance becomes the historical anchor.
-          runningBalance = storedBalance;
-
-          continue;
-        }
-
-        // -----------------------------------------------------
-        // CASE 2: CALCULATE MISSING HISTORICAL BALANCE
-        // -----------------------------------------------------
-
-        updatedBalanceMap.set(
-          transaction.id,
-          runningBalance,
-        );
-
-        const coins = Number(transaction.coins || 0);
-
-        const transactionType = String(
-          transaction.type || "",
-        ).toUpperCase();
-
-        // -----------------------------------------------------
-        // TRANSACTIONS THAT INCREASE WALLET BALANCE
-        // -----------------------------------------------------
-        //
-        // Moving backwards in time:
-        // Subtract the credited coins.
-        //
-        // Includes CASHBACK.
-        // -----------------------------------------------------
-
-        if (
-          transactionType === "CREDIT" ||
-          transactionType === "REFUND" ||
-          transactionType === "CASHBACK" ||
-          transactionType === "RECHARGE"
-        ) {
-          runningBalance -= coins;
-        }
-
-        // -----------------------------------------------------
-        // TRANSACTIONS THAT DECREASE WALLET BALANCE
-        // -----------------------------------------------------
-        //
-        // Moving backwards in time:
-        // Add the deducted coins back.
-        // -----------------------------------------------------
-
-        else if (
-          transactionType === "DEBIT" ||
-          transactionType === "CHAT" ||
-          transactionType === "CALL" ||
-          transactionType === "SESSION"
-        ) {
-          runningBalance += coins;
-        }
-
-        // -----------------------------------------------------
-        // DISCOUNT
-        // -----------------------------------------------------
-        //
-        // DISCOUNT is treated as metadata here because
-        // your existing recharge logic records a DISCOUNT
-        // transaction without changing the wallet balance.
-        //
-        // If your application deducts or credits coins
-        // for DISCOUNT transactions, adjust this behavior.
-        // -----------------------------------------------------
-      }
-    });
-
-    // =========================================================
-    // 9. FINAL RESPONSE
-    // =========================================================
-
-    const finalData = data.map((transaction) => ({
-      ...transaction,
-
-      updatedBalance:
-        updatedBalanceMap.get(transaction.id) ??
-        Number(transaction.userWallet?.balanceCoins || 0),
-    }));
-
-    // =========================================================
-    // 10. RETURN PAGINATED RESULT
-    // =========================================================
-
-    return {
-      data: finalData,
-      totalCount,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    };
-  } catch (err) {
-    console.error(
-      "getUserWalletTransactions error:",
-      err,
-    );
-
-    throw new Error(
-      err.message || "Failed to fetch transactions",
-    );
-  }
-},
+    },
     // getAstrologerWalletTransactions: async (
     //   _,
     //   {
@@ -10445,114 +10493,122 @@ export const resolvers = {
       });
     },
 
-    createPujaService: async (_, args, context) => {
-      const prisma = context.prisma;
+ 
+createPujaService: async (_, args, context) => {
+  const prisma = context.prisma;
 
-      validatePrice(args.price, args.mrp, args.discount);
+  const mantraOptions = cleanMantraOptions(args.mantraOptions);
+  const { price, mrp, discount } = getPujaPricing(
+    mantraOptions,
+    args
+  );
+  const faqs = cleanFAQs(args.faqs);
 
-      const mantraOptions = cleanMantras(args.mantraOptions);
-      const faqs = cleanFAQs(args.faqs);
+  try {
+    return await prisma.pujaService.create({
+      data: {
+        title: args.title.trim(),
+        slug: args.slug.trim(),
+        image: args.image.trim(),
+        category: optionalText(args.category),
 
-      try {
-        return await prisma.pujaService.create({
-          data: {
-            title: args.title.trim(),
-            slug: args.slug.trim(),
-            image: args.image.trim(),
-            category: optionalText(args.category),
+        shortDescription: optionalText(args.shortDescription),
+        description: optionalText(args.description),
+        benefits: optionalText(args.benefits),
+        howToPerform: optionalText(args.howToPerform),
+        packaging: optionalText(args.packaging),
 
-            shortDescription: optionalText(args.shortDescription),
-            description: optionalText(args.description),
-            benefits: optionalText(args.benefits),
-            howToPerform: optionalText(args.howToPerform),
-            packaging: optionalText(args.packaging),
+        // Derived from the first sorted mantra option.
+        price,
+        mrp,
+        discount,
 
-            price: args.price,
-            mrp: args.mrp ?? null,
-            discount: args.discount ?? null,
+        customersCount: args.customersCount ?? 0,
+        rating: args.rating ?? 0,
 
-            // These are admin-managed display fields.
-            customersCount: args.customersCount ?? 0,
-            rating: 0,
+        mantraOptions: {
+          create: mantraOptions,
+        },
 
-            mantraOptions: {
-              create: mantraOptions.map((name) => ({ name })),
-            },
+        faqs: {
+          create: faqs,
+        },
+      },
+      include: pujaInclude,
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
+},
 
-            faqs: {
-              create: faqs,
-            },
-          },
-          include: pujaInclude,
-        });
-      } catch (error) {
-        handlePrismaError(error);
-      }
-    },
 
     // ==========================================
     // UPDATE PUJA
     // ==========================================
-    updatePujaService: async (_, { id, ...args }, context) => {
-      const prisma = context.prisma;
 
-      validatePrice(args.price, args.mrp, args.discount);
+updatePujaService: async (_, { id, ...args }, context) => {
+  const prisma = context.prisma;
 
-      const mantraOptions = cleanMantras(args.mantraOptions);
-      const faqs = cleanFAQs(args.faqs);
+  const mantraOptions = cleanMantraOptions(args.mantraOptions);
+  const { price, mrp, discount } = getPujaPricing(
+    mantraOptions,
+    args
+  );
+  const faqs = cleanFAQs(args.faqs);
 
-      try {
-        // Replace editable mantra options and FAQs atomically.
-        // Reviews are intentionally NOT deleted during an update.
-        return await prisma.$transaction(async (tx) => {
-          const existing = await tx.pujaService.findUnique({
-            where: { id },
-            select: { id: true },
-          });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.pujaService.findUnique({
+        where: { id },
+        select: { id: true },
+      });
 
-          if (!existing) {
-            throw new GraphQLError("Puja Service not found.", {
-              extensions: { code: "NOT_FOUND" },
-            });
-          }
-
-          return tx.pujaService.update({
-            where: { id },
-            data: {
-              title: args.title.trim(),
-              slug: args.slug.trim(),
-              image: args.image.trim(),
-              category: optionalText(args.category),
-
-              shortDescription: optionalText(args.shortDescription),
-              description: optionalText(args.description),
-              benefits: optionalText(args.benefits),
-              howToPerform: optionalText(args.howToPerform),
-              packaging: optionalText(args.packaging),
-
-              price: args.price,
-              mrp: args.mrp ?? null,
-              discount: args.discount ?? null,
-
-              customersCount: args.customersCount ?? 0,
-
-              mantraOptions: {
-                deleteMany: {},
-                create: mantraOptions.map((name) => ({ name })),
-              },
-
-              faqs: {
-                deleteMany: {},
-                create: faqs,
-              },
-            },
-            include: pujaInclude,
-          });
+      if (!existing) {
+        throw new GraphQLError("Puja Service not found.", {
+          extensions: { code: "NOT_FOUND" },
         });
-      } catch (error) {
-        handlePrismaError(error);
       }
-    },
+
+      return tx.pujaService.update({
+        where: { id },
+        data: {
+          title: args.title.trim(),
+          slug: args.slug.trim(),
+          image: args.image.trim(),
+          category: optionalText(args.category),
+
+          shortDescription: optionalText(args.shortDescription),
+          description: optionalText(args.description),
+          benefits: optionalText(args.benefits),
+          howToPerform: optionalText(args.howToPerform),
+          packaging: optionalText(args.packaging),
+
+          // Derived from the first sorted mantra option.
+          price,
+          mrp,
+          discount,
+
+          customersCount: args.customersCount ?? 0,
+          rating: args.rating ?? 0,
+
+          mantraOptions: {
+            deleteMany: {},
+            create: mantraOptions,
+          },
+
+          faqs: {
+            deleteMany: {},
+            create: faqs,
+          },
+        },
+        include: pujaInclude,
+      });
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
+},
+
 
     // ==========================================
     // DELETE PUJA

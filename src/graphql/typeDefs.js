@@ -2363,13 +2363,6 @@ const typeDefs = gql`
     REJECTED
   }
 
-  type PujaMantraOption {
-    id: ID!
-    name: String!
-    pujaId: ID!
-    createdAt: String!
-  }
-
   type PujaFAQ {
     id: ID!
     question: String!
@@ -2394,6 +2387,23 @@ const typeDefs = gql`
   input PujaFAQInput {
     question: String!
     answer: String!
+  }
+
+  type PujaMantraOption {
+    id: ID!
+    name: String!
+    originalPrice: Float!
+    offerPrice: Float!
+    sortOrder: Int!
+    pujaId: ID!
+    createdAt: String!
+  }
+
+  input PujaMantraOptionInput {
+    name: String!
+    originalPrice: Float!
+    offerPrice: Float!
+    sortOrder: Int!
   }
 
   type PujaService {
@@ -2423,6 +2433,7 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
   }
+
   #-------START LIVE STREAMING-------
 
   enum LiveStatus {
@@ -3107,6 +3118,7 @@ const typeDefs = gql`
     restoreAstrologer(astrologerId: ID!): Boolean
 
     #puja services
+
     createPujaService(
       title: String!
       slug: String!
@@ -3125,7 +3137,7 @@ const typeDefs = gql`
       customersCount: Int
       rating: Float
 
-      mantraOptions: [String!]
+      mantraOptions: [PujaMantraOptionInput!]
       faqs: [PujaFAQInput!]
     ): PujaService!
 
@@ -3148,7 +3160,7 @@ const typeDefs = gql`
       customersCount: Int
       rating: Float
 
-      mantraOptions: [String!]
+      mantraOptions: [PujaMantraOptionInput!]
       faqs: [PujaFAQInput!]
     ): PujaService!
 
