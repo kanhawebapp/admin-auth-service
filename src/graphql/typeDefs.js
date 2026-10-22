@@ -2321,7 +2321,8 @@ const typeDefs = gql`
   #-------------END CODE FOR ASTROLOGER PAYOUT--------
 
   #---------GET BOOKED SERVICE-----------
-  type AdminServiceBookingReport {
+
+    type AdminServiceBookingReport {
     id: ID!
 
     userName: String
@@ -2346,6 +2347,15 @@ const typeDefs = gql`
     # Actual amount paid by user
     finalPaidAmount: Float!
   }
+
+  type AdminServiceBookingReportResponse {
+    success: Boolean!
+    total: Int!
+    currentPage: Int!
+    totalPages: Int!
+    limit: Int!
+    data: [AdminServiceBookingReport!]!
+  }
 type AdminPujaBookingReportItem {
   id: ID!
   userId: String!
@@ -2363,7 +2373,7 @@ type AdminPujaBookingReportItem {
   totalAmount: Float!
 
   paymentStatus: PaymentStatus!
-  bookingStatus: BookingStatus!
+  bookingStatus: String!
   bookingDate: String
 }
 
@@ -2375,6 +2385,13 @@ type AdminPujaBookingReport {
   limit: Int!
   data: [AdminPujaBookingReportItem!]!
 }
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
   #Puja servicess
 
   enum PujaReviewStatus {
@@ -2790,11 +2807,11 @@ type AdminPujaBookingReport {
     exportAstrologers(query: String): [Astrologer]
     payoutReport(fromDate: String!, toDate: String!): [PayoutReport!]!
 
-    getAdminServiceBookingReport(
-      page: Int
-      limit: Int
-      bookingStatus: String
-    ): AdminServiceBookingReportResponse!
+getAdminServiceBookingReport(
+  page: Int
+  limit: Int
+  bookingStatus: String
+): AdminServiceBookingReportResponse!
 
     getAllScheduledLives(
       page: Int = 1
