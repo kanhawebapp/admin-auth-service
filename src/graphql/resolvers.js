@@ -5537,7 +5537,7 @@ export const resolvers = {
       _,
       { page = 1, limit = 20, bookingStatus },
       context,
-    ) => {
+     ) => {
       try {
         // ==========================================
         // SUPER_ADMIN ONLY
@@ -5837,6 +5837,139 @@ export const resolvers = {
         );
       }
     },
+
+    
+getAdminPujaBookingReport: async (
+  _,
+  { page = 1, limit = 20, paymentStatus, bookingStatus },
+  context,
+) => {
+  try {
+    // ==========================================
+    // SUPER_ADMIN ONLY
+    // ==========================================
+    if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
+      throw new Error(
+        "Only SUPER_ADMIN can view puja booking reports",
+      );
+    }
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
+    const currentPage = Math.max(1, Number(page) || 1);
+    const take = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const skip = (currentPage - 1) * take;
+
+    // ==========================================
+    // FILTER
+    // ==========================================
+    const where = {};
+
+    if (paymentStatus) {
+      where.paymentStatus = paymentStatus;
+    }
+
+    if (bookingStatus) {
+      where.bookingStatus = bookingStatus;
+    }
+
+    // ==========================================
+    // FETCH BOOKINGS + TOTAL
+    // ==========================================
+    const [bookings, total] = await Promise.all([
+      prisma.pujaBooking.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          userId: true,
+          pujaId: true,
+
+          mantraOptionId: true,
+          mantraOptionName: true,
+
+          quantity: true,
+          unitPrice: true,
+          totalAmount: true,
+
+          paymentStatus: true,
+          bookingStatus: true,
+
+          createdAt: true,
+
+          // USER
+          user: {
+            select: {
+              name: true,
+              mobile: true,
+            },
+          },
+
+          // PUJA
+          puja: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      }),
+
+      prisma.pujaBooking.count({ where }),
+    ]);
+
+    // ==========================================
+    // FORMAT RESPONSE
+    // ==========================================
+    const data = bookings.map((booking) => ({
+      id: booking.id,
+
+      userId: booking.userId,
+      userName: booking.user?.name || null,
+      userMobile: booking.user?.mobile || null,
+
+      pujaId: booking.pujaId,
+      pujaName: booking.puja?.title || null,
+
+      mantraOptionId: booking.mantraOptionId,
+      mantraOptionName: booking.mantraOptionName,
+
+      quantity: booking.quantity,
+      unitPrice: Number(booking.unitPrice),
+      totalAmount: Number(booking.totalAmount),
+
+      paymentStatus: booking.paymentStatus,
+      bookingStatus: booking.bookingStatus,
+
+      bookingDate: booking.createdAt
+        ? booking.createdAt.toISOString()
+        : null,
+    }));
+
+    // ==========================================
+    // RETURN
+    // ==========================================
+    return {
+      success: true,
+      total,
+      currentPage,
+      totalPages: Math.ceil(total / take),
+      limit: take,
+      data,
+    };
+  } catch (error) {
+    console.error("getAdminPujaBookingReport error:", error);
+
+    throw new Error(
+      error.message || "Failed to fetch puja booking report",
+    );
+  }
+},
+
 
     getAllScheduledLives: async (
       _,
