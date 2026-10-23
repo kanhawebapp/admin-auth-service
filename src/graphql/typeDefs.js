@@ -2496,6 +2496,17 @@ enum BookingStatus {
     astrologer: LiveStreamAstrologer
   }
 
+ 
+
+type EndedLiveStreamsResponse {
+  success: Boolean!
+  total: Int!
+  currentPage: Int!
+  totalPages: Int!
+  limit: Int!
+  data: [LiveStream!]!
+}
+
   type LiveStreamAstrologer {
     id: ID!
     name: String
@@ -2567,6 +2578,10 @@ enum BookingStatus {
   }
   #--------END LIVE STREAMING---------
   type Query {
+    getEndedLiveStreams(
+    page: Int = 1
+    limit: Int = 20
+  ): EndedLiveStreamsResponse!
     # puja services
       getAdminPujaBookingReport(
     page: Int = 1
