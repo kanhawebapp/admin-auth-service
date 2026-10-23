@@ -345,6 +345,7 @@ const typeDefs = gql`
     validityDays: Int!
     isActive: Boolean
     hideAfterFirstRecharge: Boolean
+    isFirstTimeOffer: Boolean 
   }
 
   type RechargePack {
@@ -359,6 +360,7 @@ const typeDefs = gql`
     createdAt: DateTime
     updatedAt: DateTime
     hideAfterFirstRecharge: Boolean!
+    isFirstTimeOffer: Boolean!
   }
 
   input UpdateRechargePackInput {
@@ -370,6 +372,7 @@ const typeDefs = gql`
     validityDays: Int
     isActive: Boolean
     hideAfterFirstRecharge: Boolean
+    isFirstTimeOffer: Boolean
   }
 
   #-----------END OF RECHARGE PACKS-----------------#

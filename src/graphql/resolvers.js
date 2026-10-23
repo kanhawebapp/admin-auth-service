@@ -8531,6 +8531,8 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
             validityDays: input.validityDays,
             isActive: input.isActive ?? true,
             hideAfterFirstRecharge: input.hideAfterFirstRecharge ?? false,
+            isFirstTimeOffer: input.isFirstTimeOffer ?? false,
+            
           },
         });
 
