@@ -5970,7 +5970,71 @@ getAdminPujaBookingReport: async (
   }
 },
 
+getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
+  try {
+    const currentPage = Math.max(1, Number(page) || 1);
+    const take = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const skip = (currentPage - 1) * take;
 
+    const where = {
+      status: "ENDED",
+    };
+
+    const [streams, total] = await Promise.all([
+      prisma.liveStream.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          endedAt: "desc",
+        },
+        select: {
+          id: true,
+          astrologerId: true,
+          title: true,
+          channelName: true,
+          chatRoomId: true,
+          status: true,
+          scheduledAt: true,
+          scheduledEndAt: true,
+          createdAt: true,
+          startedAt: true,
+          endedAt: true,
+          totalViews: true,
+          astrologer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+
+      prisma.liveStream.count({ where }),
+    ]);
+
+    const data = streams.map((stream) => ({
+      ...stream,
+      scheduledAt: stream.scheduledAt?.toISOString() ?? null,
+      scheduledEndAt: stream.scheduledEndAt?.toISOString() ?? null,
+      createdAt: stream.createdAt?.toISOString() ?? null,
+      startedAt: stream.startedAt?.toISOString() ?? null,
+      endedAt: stream.endedAt?.toISOString() ?? null,
+    }));
+
+    return {
+      success: true,
+      total,
+      currentPage,
+      totalPages: Math.ceil(total / take),
+      limit: take,
+      data,
+    };
+  } catch (error) {
+    console.error("getEndedLiveStreams error:", error);
+    throw new Error("Failed to fetch ended livestreams");
+  }
+},
     getAllScheduledLives: async (
       _,
       { page = 1, limit = 10, search = "" },
