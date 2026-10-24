@@ -345,7 +345,7 @@ const typeDefs = gql`
     validityDays: Int!
     isActive: Boolean
     hideAfterFirstRecharge: Boolean
-    isFirstTimeOffer: Boolean 
+    isFirstTimeOffer: Boolean
   }
 
   type RechargePack {
@@ -2325,7 +2325,7 @@ const typeDefs = gql`
 
   #---------GET BOOKED SERVICE-----------
 
-    type AdminServiceBookingReport {
+  type AdminServiceBookingReport {
     id: ID!
 
     userName: String
@@ -2359,41 +2359,41 @@ const typeDefs = gql`
     limit: Int!
     data: [AdminServiceBookingReport!]!
   }
-type AdminPujaBookingReportItem {
-  id: ID!
-  userId: String!
-  userName: String
-  userMobile: String
+  type AdminPujaBookingReportItem {
+    id: ID!
+    userId: String!
+    userName: String
+    userMobile: String
 
-  pujaId: String!
-  pujaName: String
+    pujaId: String!
+    pujaName: String
 
-  mantraOptionId: String
-  mantraOptionName: String
+    mantraOptionId: String
+    mantraOptionName: String
 
-  quantity: Int!
-  unitPrice: Float!
-  totalAmount: Float!
+    quantity: Int!
+    unitPrice: Float!
+    totalAmount: Float!
 
-  paymentStatus: PaymentStatus!
-  bookingStatus: String!
-  bookingDate: String
-}
+    paymentStatus: PaymentStatus!
+    bookingStatus: String!
+    bookingDate: String
+  }
 
-type AdminPujaBookingReport {
-  success: Boolean!
-  total: Int!
-  currentPage: Int!
-  totalPages: Int!
-  limit: Int!
-  data: [AdminPujaBookingReportItem!]!
-}
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  COMPLETED
-  CANCELLED
-}
+  type AdminPujaBookingReport {
+    success: Boolean!
+    total: Int!
+    currentPage: Int!
+    totalPages: Int!
+    limit: Int!
+    data: [AdminPujaBookingReportItem!]!
+  }
+  enum BookingStatus {
+    PENDING
+    CONFIRMED
+    COMPLETED
+    CANCELLED
+  }
 
   #Puja servicess
 
@@ -2499,16 +2499,14 @@ enum BookingStatus {
     astrologer: LiveStreamAstrologer
   }
 
- 
-
-type EndedLiveStreamsResponse {
-  success: Boolean!
-  total: Int!
-  currentPage: Int!
-  totalPages: Int!
-  limit: Int!
-  data: [LiveStream!]!
-}
+  type EndedLiveStreamsResponse {
+    success: Boolean!
+    total: Int!
+    currentPage: Int!
+    totalPages: Int!
+    limit: Int!
+    data: [LiveStream!]!
+  }
 
   type LiveStreamAstrologer {
     id: ID!
@@ -2580,18 +2578,104 @@ type EndedLiveStreamsResponse {
     totalPages: Int!
   }
   #--------END LIVE STREAMING---------
+
+  # ==========================================
+# Service Bank Payment Log
+# ==========================================
+
+type ServicesBankPaymentLog {
+  id: ID!
+  userId: String!
+  serviceType: String!
+  serviceId: String!
+  bookingId: String
+
+  # Payment details
+  amount: Float!
+  provider: String!
+  razorpayOrderId: String!
+  razorpayPaymentId: String
+  status: String!
+
+  # Invoice details
+  invoiceNo: String
+
+  # GST details
+  taxableAmount: Float
+  gstRate: Float
+  cgst: Float
+  sgst: Float
+  igst: Float
+  totalTax: Float
+  totalAmount: Float
+
+  # Payment gateway charges
+  pgChargeRate: Float
+  pgCharge: Float
+  pgIgst: Float
+  pgTotal: Float
+  receivableAmount: Float
+
+  # Location and platform
+  country: String
+  state: String
+  city: String
+  platform: String
+
+  # Coupon details
+  couponId: String
+  discount: Float
+  cashback: Float
+
+  # Timestamps
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# ==========================================
+# Pagination and Financial Summary
+# ==========================================
+
+type ServiceBankPaymentSummary {
+  totalRecords: Int!
+  totalPages: Int!
+  currentPage: Int!
+  limit: Int!
+
+  # Financial totals across all filtered records
+  totalAmount: Float!
+  totalTaxableAmount: Float!
+  totalTax: Float!
+  totalPgCharge: Float!
+  totalPgIgst: Float!
+  totalPgAmount: Float!
+  totalReceivableAmount: Float!
+  totalDiscount: Float!
+  totalCashback: Float!
+}
+
+# ==========================================
+# API Response
+# ==========================================
+
+type GetServiceBankPaymentDetailsResponse {
+  success: Boolean!
+  message: String!
+  data: [ServicesBankPaymentLog!]!
+  pagination: ServiceBankPaymentSummary!
+}
   type Query {
     getEndedLiveStreams(
-    page: Int = 1
-    limit: Int = 20
-  ): EndedLiveStreamsResponse!
+      page: Int = 1
+      limit: Int = 20
+    ): EndedLiveStreamsResponse!
     # puja services
-      getAdminPujaBookingReport(
-    page: Int = 1
-    limit: Int = 20
-    paymentStatus: PaymentStatus
-    bookingStatus: BookingStatus
-  ): AdminPujaBookingReport!
+    getAdminPujaBookingReport(
+      page: Int = 1
+      limit: Int = 20
+      paymentStatus: PaymentStatus
+      bookingStatus: BookingStatus
+    ): AdminPujaBookingReport!
     pujaServices: [PujaService!]!
 
     pujaService(id: ID, slug: String): PujaService
@@ -2825,11 +2909,11 @@ type EndedLiveStreamsResponse {
     exportAstrologers(query: String): [Astrologer]
     payoutReport(fromDate: String!, toDate: String!): [PayoutReport!]!
 
-getAdminServiceBookingReport(
-  page: Int
-  limit: Int
-  bookingStatus: String
-): AdminServiceBookingReportResponse!
+    getAdminServiceBookingReport(
+      page: Int
+      limit: Int
+      bookingStatus: String
+    ): AdminServiceBookingReportResponse!
 
     getAllScheduledLives(
       page: Int = 1
@@ -2844,6 +2928,43 @@ getAdminServiceBookingReport(
     ): LiveGiftTransactionPagination!
 
     getRunningLiveStreams: [RunningLiveStream!]!
+
+    getServiceBankPaymentDetails(
+      # Pagination
+      page: Int = 1
+      limit: Int = 10
+
+      # Payment filters
+      serviceType: String
+      status: String
+      provider: String
+
+      # Related IDs
+      userId: String
+      serviceId: String
+      bookingId: String
+
+      # Razorpay filters
+      razorpayOrderId: String
+      razorpayPaymentId: String
+      invoiceNo: String
+
+      # Location filters
+      country: String
+      state: String
+      city: String
+      platform: String
+
+      # Coupon filter
+      couponId: String
+
+      # Search across identifiers
+      search: String
+
+      # Date range
+      startDate: DateTime
+      endDate: DateTime
+    ): GetServiceBankPaymentDetailsResponse!
   }
 
   type Mutation {

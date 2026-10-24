@@ -6365,6 +6365,201 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
         endedAt: live.endedAt?.toISOString() ?? null,
       }));
     },
+    
+getServiceBankPaymentDetails: async (_, args, context) => {
+  const { prisma } = context;
+
+  await checkPermission(context, "servicesbankpayment.view");
+
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      serviceType,
+      status,
+      provider,
+      userId,
+      serviceId,
+      bookingId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      invoiceNo,
+      country,
+      state,
+      city,
+      platform,
+      couponId,
+      search,
+      startDate,
+      endDate,
+    } = args;
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageLimit = Math.min(100, Math.max(1, Number(limit) || 10));
+    const skip = (currentPage - 1) * pageLimit;
+
+    const where = {};
+
+    // Exact-match filters
+    if (serviceType) where.serviceType = serviceType;
+    if (status) where.status = status;
+    if (provider) where.provider = provider;
+    if (userId) where.userId = userId;
+    if (serviceId) where.serviceId = serviceId;
+    if (bookingId) where.bookingId = bookingId;
+    if (razorpayOrderId) where.razorpayOrderId = razorpayOrderId;
+    if (razorpayPaymentId) where.razorpayPaymentId = razorpayPaymentId;
+    if (invoiceNo) where.invoiceNo = invoiceNo;
+    if (country) where.country = country;
+    if (state) where.state = state;
+    if (city) where.city = city;
+    if (platform) where.platform = platform;
+    if (couponId) where.couponId = couponId;
+
+    // Date-range filter
+    if (startDate || endDate) {
+      where.createdAt = {};
+
+      if (startDate) {
+        const start = new Date(startDate);
+
+        if (Number.isNaN(start.getTime())) {
+          throw new Error("Invalid startDate");
+        }
+
+        where.createdAt.gte = start;
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+
+        if (Number.isNaN(end.getTime())) {
+          throw new Error("Invalid endDate");
+        }
+
+        where.createdAt.lte = end;
+      }
+
+      if (
+        where.createdAt.gte &&
+        where.createdAt.lte &&
+        where.createdAt.gte > where.createdAt.lte
+      ) {
+        throw new Error("startDate cannot be greater than endDate");
+      }
+    }
+
+    // Search across payment identifiers
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+
+      where.AND = [
+        {
+          OR: [
+            {
+              userId: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              serviceId: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              bookingId: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              razorpayOrderId: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              razorpayPaymentId: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              invoiceNo: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    // Fetch paginated records, total count, and financial totals
+    const [data, totalRecords, aggregate] = await Promise.all([
+      prisma.servicesBankPaymentLog.findMany({
+        where,
+        skip,
+        take: pageLimit,
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+
+      prisma.servicesBankPaymentLog.count({
+        where,
+      }),
+
+      prisma.servicesBankPaymentLog.aggregate({
+        where,
+        _sum: {
+          amount: true,
+          taxableAmount: true,
+          totalTax: true,
+          pgCharge: true,
+          pgIgst: true,
+          pgTotal: true,
+          receivableAmount: true,
+          discount: true,
+          cashback: true,
+        },
+      }),
+    ]);
+
+    const sums = aggregate._sum || {};
+
+    const numberOrZero = (value) =>
+      typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+    return {
+      success: true,
+      message: "Service bank payment details fetched successfully",
+      data,
+      pagination: {
+        totalRecords,
+        totalPages: Math.ceil(totalRecords / pageLimit),
+        currentPage,
+        limit: pageLimit,
+
+        totalAmount: numberOrZero(sums.amount),
+        totalTaxableAmount: numberOrZero(sums.taxableAmount),
+        totalTax: numberOrZero(sums.totalTax),
+        totalPgCharge: numberOrZero(sums.pgCharge),
+        totalPgIgst: numberOrZero(sums.pgIgst),
+        totalPgAmount: numberOrZero(sums.pgTotal),
+        totalReceivableAmount: numberOrZero(sums.receivableAmount),
+        totalDiscount: numberOrZero(sums.discount),
+        totalCashback: numberOrZero(sums.cashback),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching service bank payment details:", error);
+    throw error;
+  }
+},
+
   },
 
   // **********************************************START MUTATION**********************************
