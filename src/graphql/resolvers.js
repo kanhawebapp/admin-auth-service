@@ -6365,14 +6365,14 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
         endedAt: live.endedAt?.toISOString() ?? null,
       }));
     },
-    
 
 getServiceBankPaymentDetails: async (_, args, context) => {
   const { prisma } = context;
 
-  await checkPermission(context, "servicesbankpayment.view");
-
   try {
+    // 1. Check admin permission
+    await checkPermission(context, "servicesbankpayment.view");
+
     const {
       page = 1,
       limit = 10,
@@ -6395,12 +6395,19 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       endDate,
     } = args;
 
-    // 1. Pagination
+    // 2. Validate Prisma context
+    if (!prisma?.servicesBankPaymentLog) {
+      throw new Error(
+        "Prisma servicesBankPaymentLog model is unavailable in context"
+      );
+    }
+
+    // 3. Pagination
     const currentPage = Math.max(1, Number(page) || 1);
     const pageLimit = Math.min(100, Math.max(1, Number(limit) || 10));
     const skip = (currentPage - 1) * pageLimit;
 
-    // 2. Build filters
+    // 4. Build filters
     const where = {};
 
     if (serviceType) where.serviceType = serviceType;
@@ -6418,7 +6425,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
     if (platform) where.platform = platform;
     if (couponId) where.couponId = couponId;
 
-    // 3. Date-range filter
+    // 5. Date range
     if (startDate || endDate) {
       where.createdAt = {};
 
@@ -6439,9 +6446,9 @@ getServiceBankPaymentDetails: async (_, args, context) => {
           throw new Error("Invalid endDate");
         }
 
-        // Include the entire day for YYYY-MM-DD input.
+        // Include the complete date for YYYY-MM-DD input.
         if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-          end.setHours(23, 59, 59, 999);
+          end.setUTCHours(23, 59, 59, 999);
         }
 
         where.createdAt.lte = end;
@@ -6456,9 +6463,9 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       }
     }
 
-    // 4. Search across payment identifiers
-    if (search && search.trim()) {
-      const searchTerm = search.trim();
+    // 6. Search across payment identifiers
+    if (search && String(search).trim()) {
+      const searchTerm = String(search).trim();
 
       where.AND = [
         {
@@ -6504,8 +6511,12 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       ];
     }
 
-    // 5. Fetch payment records, count, and financial summaries
-    const [paymentLogs, totalRecords, aggregate] = await Promise.all([
+    // 7. Fetch payment records, count, and financial totals
+    const [
+      paymentLogs,
+      totalRecords,
+      aggregate,
+    ] = await Promise.all([
       prisma.servicesBankPaymentLog.findMany({
         where,
         skip,
@@ -6535,7 +6546,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       }),
     ]);
 
-    // 6. Resolve service names
+    // 8. Resolve service names
     const data = await Promise.all(
       paymentLogs.map(async (payment) => {
         let serviceName = null;
@@ -6543,17 +6554,19 @@ getServiceBankPaymentDetails: async (_, args, context) => {
         try {
           if (payment.serviceId) {
             if (payment.serviceType === "PUJA") {
+              // PujaService has a "title" field, not "name".
               const pujaService = await prisma.pujaService.findUnique({
                 where: {
                   id: payment.serviceId,
                 },
                 select: {
-                  name: true,
+                  title: true,
                 },
               });
 
-              serviceName = pujaService?.name ?? null;
-            } else if (payment.serviceType === "SERVICE") {
+              serviceName = pujaService?.title ?? null;
+            } else if (payment.serviceType === "HEALING") {
+              // Service has a "name" field.
               const service = await prisma.service.findUnique({
                 where: {
                   id: payment.serviceId,
@@ -6567,10 +6580,11 @@ getServiceBankPaymentDetails: async (_, args, context) => {
             }
           }
         } catch (serviceError) {
-          console.error(
-            `Failed to fetch service name for serviceId ${payment.serviceId}:`,
-            serviceError.message
-          );
+          console.error("Failed to fetch service name:", {
+            serviceId: payment.serviceId,
+            serviceType: payment.serviceType,
+            error: serviceError.message,
+          });
         }
 
         return {
@@ -6580,7 +6594,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       })
     );
 
-    // 7. Financial summaries
+    // 9. Normalize Prisma Decimal/null values for financial summaries
     const sums = aggregate._sum || {};
 
     const numberOrZero = (value) => {
@@ -6591,11 +6605,13 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       return Number.isFinite(number) ? number : 0;
     };
 
-    // 8. Return response
+    // 10. Return response
     return {
       success: true,
       message: "Service bank payment details fetched successfully",
+
       data,
+
       pagination: {
         totalRecords,
         totalPages: Math.ceil(totalRecords / pageLimit),
@@ -6622,6 +6638,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
     throw error;
   }
 },
+
 
 
   },

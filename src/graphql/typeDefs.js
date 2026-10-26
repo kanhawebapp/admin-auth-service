@@ -2930,42 +2930,43 @@ type GetServiceBankPaymentDetailsResponse {
 
     getRunningLiveStreams: [RunningLiveStream!]!
 
-    getServiceBankPaymentDetails(
-      # Pagination
-      page: Int = 1
-      limit: Int = 10
+getServiceBankPaymentDetails(
+  # Pagination
+  page: Int = 1
+  limit: Int = 10
 
-      # Payment filters
-      serviceType: String
-      status: String
-      provider: String
+  # Payment filters
+  serviceType: String
+  status: String
+  provider: String
 
-      # Related IDs
-      userId: String
-      serviceId: String
-      bookingId: String
+  # Related IDs
+  userId: String
+  serviceId: String
+  bookingId: String
 
-      # Razorpay filters
-      razorpayOrderId: String
-      razorpayPaymentId: String
-      invoiceNo: String
+  # Razorpay filters
+  razorpayOrderId: String
+  razorpayPaymentId: String
+  invoiceNo: String
 
-      # Location filters
-      country: String
-      state: String
-      city: String
-      platform: String
+  # Location filters
+  country: String
+  state: String
+  city: String
+  platform: String
 
-      # Coupon filter
-      couponId: String
+  # Coupon filter
+  couponId: String
 
-      # Search across identifiers
-      search: String
+  # Search across identifiers
+  search: String
 
-      # Date range
-      startDate: DateTime
-      endDate: DateTime
-    ): GetServiceBankPaymentDetailsResponse!
+  # Date range
+  startDate: DateTime
+  endDate: DateTime
+): GetServiceBankPaymentDetailsResponse!
+
   }
 
   type Mutation {
