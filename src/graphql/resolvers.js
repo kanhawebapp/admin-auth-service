@@ -6368,7 +6368,7 @@ getLiveGiftTransactions: async (
             },
             select: {
               id: true,
-              name: true,
+              displayName: true,
             },
           })
         : Promise.resolve([]),
@@ -6424,7 +6424,7 @@ getLiveGiftTransactions: async (
 
           // Astrologer who received the gift.
           astrologerName:
-            astrologer?.name ?? "Unknown Astrologer",
+            astrologer?.displayName ?? "Unknown Astrologer",
 
           createdAt: transaction.createdAt.toISOString(),
         };
