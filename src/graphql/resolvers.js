@@ -6366,6 +6366,7 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
       }));
     },
     
+
 getServiceBankPaymentDetails: async (_, args, context) => {
   const { prisma } = context;
 
@@ -6394,13 +6395,14 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       endDate,
     } = args;
 
+    // 1. Pagination
     const currentPage = Math.max(1, Number(page) || 1);
     const pageLimit = Math.min(100, Math.max(1, Number(limit) || 10));
     const skip = (currentPage - 1) * pageLimit;
 
+    // 2. Build filters
     const where = {};
 
-    // Exact-match filters
     if (serviceType) where.serviceType = serviceType;
     if (status) where.status = status;
     if (provider) where.provider = provider;
@@ -6416,7 +6418,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
     if (platform) where.platform = platform;
     if (couponId) where.couponId = couponId;
 
-    // Date-range filter
+    // 3. Date-range filter
     if (startDate || endDate) {
       where.createdAt = {};
 
@@ -6437,6 +6439,11 @@ getServiceBankPaymentDetails: async (_, args, context) => {
           throw new Error("Invalid endDate");
         }
 
+        // Include the entire day for YYYY-MM-DD input.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+          end.setHours(23, 59, 59, 999);
+        }
+
         where.createdAt.lte = end;
       }
 
@@ -6449,7 +6456,7 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       }
     }
 
-    // Search across payment identifiers
+    // 4. Search across payment identifiers
     if (search && search.trim()) {
       const searchTerm = search.trim();
 
@@ -6497,8 +6504,8 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       ];
     }
 
-    // Fetch paginated records, total count, and financial totals
-    const [data, totalRecords, aggregate] = await Promise.all([
+    // 5. Fetch payment records, count, and financial summaries
+    const [paymentLogs, totalRecords, aggregate] = await Promise.all([
       prisma.servicesBankPaymentLog.findMany({
         where,
         skip,
@@ -6528,11 +6535,63 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       }),
     ]);
 
+    // 6. Resolve service names
+    const data = await Promise.all(
+      paymentLogs.map(async (payment) => {
+        let serviceName = null;
+
+        try {
+          if (payment.serviceId) {
+            if (payment.serviceType === "PUJA") {
+              const pujaService = await prisma.pujaService.findUnique({
+                where: {
+                  id: payment.serviceId,
+                },
+                select: {
+                  name: true,
+                },
+              });
+
+              serviceName = pujaService?.name ?? null;
+            } else if (payment.serviceType === "SERVICE") {
+              const service = await prisma.service.findUnique({
+                where: {
+                  id: payment.serviceId,
+                },
+                select: {
+                  name: true,
+                },
+              });
+
+              serviceName = service?.name ?? null;
+            }
+          }
+        } catch (serviceError) {
+          console.error(
+            `Failed to fetch service name for serviceId ${payment.serviceId}:`,
+            serviceError.message
+          );
+        }
+
+        return {
+          ...payment,
+          serviceName,
+        };
+      })
+    );
+
+    // 7. Financial summaries
     const sums = aggregate._sum || {};
 
-    const numberOrZero = (value) =>
-      typeof value === "number" && Number.isFinite(value) ? value : 0;
+    const numberOrZero = (value) => {
+      if (value == null) return 0;
 
+      const number = Number(value);
+
+      return Number.isFinite(number) ? number : 0;
+    };
+
+    // 8. Return response
     return {
       success: true,
       message: "Service bank payment details fetched successfully",
@@ -6555,10 +6614,15 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       },
     };
   } catch (error) {
-    console.error("Error fetching service bank payment details:", error);
+    console.error(
+      "Error fetching service bank payment details:",
+      error
+    );
+
     throw error;
   }
 },
+
 
   },
 

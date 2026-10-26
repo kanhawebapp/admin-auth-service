@@ -2589,6 +2589,7 @@ type ServicesBankPaymentLog {
   serviceType: String!
   serviceId: String!
   bookingId: String
+  serviceName: String
 
   # Payment details
   amount: Float!
