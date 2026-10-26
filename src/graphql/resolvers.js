@@ -224,7 +224,6 @@ const pujaInclude = {
 
 const optionalText = (value) => (value === "" ? null : value);
 
-
 const cleanMantraOptions = (options = []) => {
   if (!Array.isArray(options)) return [];
 
@@ -242,23 +241,22 @@ const cleanMantraOptions = (options = []) => {
         originalPrice < 0 ||
         offerPrice < 0
       ) {
-        throw new GraphQLError(
-          `Invalid pricing for mantra option "${name}".`,
-          { extensions: { code: "BAD_USER_INPUT" } }
-        );
+        throw new GraphQLError(`Invalid pricing for mantra option "${name}".`, {
+          extensions: { code: "BAD_USER_INPUT" },
+        });
       }
 
       if (offerPrice > originalPrice) {
         throw new GraphQLError(
           `Offer price cannot exceed original price for "${name}".`,
-          { extensions: { code: "BAD_USER_INPUT" } }
+          { extensions: { code: "BAD_USER_INPUT" } },
         );
       }
 
       if (!Number.isInteger(sortOrder) || sortOrder < 0) {
         throw new GraphQLError(
           `Invalid sort order for mantra option "${name}".`,
-          { extensions: { code: "BAD_USER_INPUT" } }
+          { extensions: { code: "BAD_USER_INPUT" } },
         );
       }
 
@@ -276,7 +274,7 @@ const getPujaPricing = (mantraOptions, args) => {
   if (!mantraOptions.length) {
     throw new GraphQLError(
       "At least one valid mantra option with pricing is required.",
-      { extensions: { code: "BAD_USER_INPUT" } }
+      { extensions: { code: "BAD_USER_INPUT" } },
     );
   }
 
@@ -286,15 +284,12 @@ const getPujaPricing = (mantraOptions, args) => {
   const mrp = firstOption.originalPrice;
 
   const discount =
-    mrp > 0
-      ? Math.round(((mrp - price) / mrp) * 100 * 100) / 100
-      : 0;
+    mrp > 0 ? Math.round(((mrp - price) / mrp) * 100 * 100) / 100 : 0;
 
   validatePrice(price, mrp, discount);
 
   return { price, mrp, discount };
 };
-
 
 const cleanFAQs = (items = []) =>
   items
@@ -5537,7 +5532,7 @@ export const resolvers = {
       _,
       { page = 1, limit = 20, bookingStatus },
       context,
-     ) => {
+    ) => {
       try {
         // ==========================================
         // SUPER_ADMIN ONLY
@@ -5838,203 +5833,198 @@ export const resolvers = {
       }
     },
 
-    
-getAdminPujaBookingReport: async (
-  _,
-  { page = 1, limit = 20, paymentStatus, bookingStatus },
-  context,
-) => {
-  try {
-    // ==========================================
-    // SUPER_ADMIN ONLY
-    // ==========================================
-    if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
-      throw new Error(
-        "Only SUPER_ADMIN can view puja booking reports",
-      );
-    }
+    getAdminPujaBookingReport: async (
+      _,
+      { page = 1, limit = 20, paymentStatus, bookingStatus },
+      context,
+    ) => {
+      try {
+        // ==========================================
+        // SUPER_ADMIN ONLY
+        // ==========================================
+        if (!context.user || context.user.role.name !== "SUPER_ADMIN") {
+          throw new Error("Only SUPER_ADMIN can view puja booking reports");
+        }
 
-    // ==========================================
-    // PAGINATION
-    // ==========================================
-    const currentPage = Math.max(1, Number(page) || 1);
-    const take = Math.min(Math.max(1, Number(limit) || 20), 100);
-    const skip = (currentPage - 1) * take;
+        // ==========================================
+        // PAGINATION
+        // ==========================================
+        const currentPage = Math.max(1, Number(page) || 1);
+        const take = Math.min(Math.max(1, Number(limit) || 20), 100);
+        const skip = (currentPage - 1) * take;
 
-    // ==========================================
-    // FILTER
-    // ==========================================
-    const where = {};
+        // ==========================================
+        // FILTER
+        // ==========================================
+        const where = {};
 
-    if (paymentStatus) {
-      where.paymentStatus = paymentStatus;
-    }
+        if (paymentStatus) {
+          where.paymentStatus = paymentStatus;
+        }
 
-    if (bookingStatus) {
-      where.bookingStatus = bookingStatus;
-    }
+        if (bookingStatus) {
+          where.bookingStatus = bookingStatus;
+        }
 
-    // ==========================================
-    // FETCH BOOKINGS + TOTAL
-    // ==========================================
-    const [bookings, total] = await Promise.all([
-      prisma.pujaBooking.findMany({
-        where,
-        skip,
-        take,
-        orderBy: {
-          createdAt: "desc",
-        },
-        select: {
-          id: true,
-          userId: true,
-          pujaId: true,
-
-          mantraOptionId: true,
-          mantraOptionName: true,
-
-          quantity: true,
-          unitPrice: true,
-          totalAmount: true,
-
-          paymentStatus: true,
-          bookingStatus: true,
-
-          createdAt: true,
-
-          // USER
-          user: {
-            select: {
-              name: true,
-              mobile: true,
+        // ==========================================
+        // FETCH BOOKINGS + TOTAL
+        // ==========================================
+        const [bookings, total] = await Promise.all([
+          prisma.pujaBooking.findMany({
+            where,
+            skip,
+            take,
+            orderBy: {
+              createdAt: "desc",
             },
-          },
-
-          // PUJA
-          puja: {
-            select: {
-              title: true,
-            },
-          },
-        },
-      }),
-
-      prisma.pujaBooking.count({ where }),
-    ]);
-
-    // ==========================================
-    // FORMAT RESPONSE
-    // ==========================================
-    const data = bookings.map((booking) => ({
-      id: booking.id,
-
-      userId: booking.userId,
-      userName: booking.user?.name || null,
-      userMobile: booking.user?.mobile || null,
-
-      pujaId: booking.pujaId,
-      pujaName: booking.puja?.title || null,
-
-      mantraOptionId: booking.mantraOptionId,
-      mantraOptionName: booking.mantraOptionName,
-
-      quantity: booking.quantity,
-      unitPrice: Number(booking.unitPrice),
-      totalAmount: Number(booking.totalAmount),
-
-      paymentStatus: booking.paymentStatus,
-      bookingStatus: booking.bookingStatus,
-
-      bookingDate: booking.createdAt
-        ? booking.createdAt.toISOString()
-        : null,
-    }));
-
-    // ==========================================
-    // RETURN
-    // ==========================================
-    return {
-      success: true,
-      total,
-      currentPage,
-      totalPages: Math.ceil(total / take),
-      limit: take,
-      data,
-    };
-  } catch (error) {
-    console.error("getAdminPujaBookingReport error:", error);
-
-    throw new Error(
-      error.message || "Failed to fetch puja booking report",
-    );
-  }
-},
-
-getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
-  try {
-    const currentPage = Math.max(1, Number(page) || 1);
-    const take = Math.min(Math.max(1, Number(limit) || 20), 100);
-    const skip = (currentPage - 1) * take;
-
-    const where = {
-      status: "ENDED",
-    };
-
-    const [streams, total] = await Promise.all([
-      prisma.liveStream.findMany({
-        where,
-        skip,
-        take,
-        orderBy: {
-          endedAt: "desc",
-        },
-        select: {
-          id: true,
-          astrologerId: true,
-          title: true,
-          channelName: true,
-          chatRoomId: true,
-          status: true,
-          scheduledAt: true,
-          scheduledEndAt: true,
-          createdAt: true,
-          startedAt: true,
-          endedAt: true,
-          totalViews: true,
-          astrologer: {
             select: {
               id: true,
-              name: true,
+              userId: true,
+              pujaId: true,
+
+              mantraOptionId: true,
+              mantraOptionName: true,
+
+              quantity: true,
+              unitPrice: true,
+              totalAmount: true,
+
+              paymentStatus: true,
+              bookingStatus: true,
+
+              createdAt: true,
+
+              // USER
+              user: {
+                select: {
+                  name: true,
+                  mobile: true,
+                },
+              },
+
+              // PUJA
+              puja: {
+                select: {
+                  title: true,
+                },
+              },
             },
-          },
-        },
-      }),
+          }),
 
-      prisma.liveStream.count({ where }),
-    ]);
+          prisma.pujaBooking.count({ where }),
+        ]);
 
-    const data = streams.map((stream) => ({
-      ...stream,
-      scheduledAt: stream.scheduledAt?.toISOString() ?? null,
-      scheduledEndAt: stream.scheduledEndAt?.toISOString() ?? null,
-      createdAt: stream.createdAt?.toISOString() ?? null,
-      startedAt: stream.startedAt?.toISOString() ?? null,
-      endedAt: stream.endedAt?.toISOString() ?? null,
-    }));
+        // ==========================================
+        // FORMAT RESPONSE
+        // ==========================================
+        const data = bookings.map((booking) => ({
+          id: booking.id,
 
-    return {
-      success: true,
-      total,
-      currentPage,
-      totalPages: Math.ceil(total / take),
-      limit: take,
-      data,
-    };
-  } catch (error) {
-    console.error("getEndedLiveStreams error:", error);
-    throw new Error("Failed to fetch ended livestreams");
-  }
-},
+          userId: booking.userId,
+          userName: booking.user?.name || null,
+          userMobile: booking.user?.mobile || null,
+
+          pujaId: booking.pujaId,
+          pujaName: booking.puja?.title || null,
+
+          mantraOptionId: booking.mantraOptionId,
+          mantraOptionName: booking.mantraOptionName,
+
+          quantity: booking.quantity,
+          unitPrice: Number(booking.unitPrice),
+          totalAmount: Number(booking.totalAmount),
+
+          paymentStatus: booking.paymentStatus,
+          bookingStatus: booking.bookingStatus,
+
+          bookingDate: booking.createdAt
+            ? booking.createdAt.toISOString()
+            : null,
+        }));
+
+        // ==========================================
+        // RETURN
+        // ==========================================
+        return {
+          success: true,
+          total,
+          currentPage,
+          totalPages: Math.ceil(total / take),
+          limit: take,
+          data,
+        };
+      } catch (error) {
+        console.error("getAdminPujaBookingReport error:", error);
+
+        throw new Error(error.message || "Failed to fetch puja booking report");
+      }
+    },
+
+    getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
+      try {
+        const currentPage = Math.max(1, Number(page) || 1);
+        const take = Math.min(Math.max(1, Number(limit) || 20), 100);
+        const skip = (currentPage - 1) * take;
+
+        const where = {
+          status: "ENDED",
+        };
+
+        const [streams, total] = await Promise.all([
+          prisma.liveStream.findMany({
+            where,
+            skip,
+            take,
+            orderBy: {
+              endedAt: "desc",
+            },
+            select: {
+              id: true,
+              astrologerId: true,
+              title: true,
+              channelName: true,
+              chatRoomId: true,
+              status: true,
+              scheduledAt: true,
+              scheduledEndAt: true,
+              createdAt: true,
+              startedAt: true,
+              endedAt: true,
+              totalViews: true,
+              astrologer: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          }),
+
+          prisma.liveStream.count({ where }),
+        ]);
+
+        const data = streams.map((stream) => ({
+          ...stream,
+          scheduledAt: stream.scheduledAt?.toISOString() ?? null,
+          scheduledEndAt: stream.scheduledEndAt?.toISOString() ?? null,
+          createdAt: stream.createdAt?.toISOString() ?? null,
+          startedAt: stream.startedAt?.toISOString() ?? null,
+          endedAt: stream.endedAt?.toISOString() ?? null,
+        }));
+
+        return {
+          success: true,
+          total,
+          currentPage,
+          totalPages: Math.ceil(total / take),
+          limit: take,
+          data,
+        };
+      } catch (error) {
+        console.error("getEndedLiveStreams error:", error);
+        throw new Error("Failed to fetch ended livestreams");
+      }
+    },
     getAllScheduledLives: async (
       _,
       { page = 1, limit = 10, search = "" },
@@ -6161,179 +6151,297 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
         throw error;
       }
     },
-    getLiveGiftTransactions: async (
-      _,
-      { page = 1, limit = 20, filters = {} },
-      context,
-    ) => {
-      try {
-        // ==========================================
-        // 1. ADMIN AUTHORIZATION
-        // ==========================================
+   
+getLiveGiftTransactions: async (
+  _,
+  { page = 1, limit = 20, filters = {} },
+  context
+) => {
+  try {
+    // ==========================================
+    // 1. ADMIN AUTHORIZATION
+    // ==========================================
 
-        // Adapt this check to your existing admin
-        // authentication and role middleware.
-        const role = context?.user?.role;
-        console.log(role);
-        if (!context?.user) {
-          throw new Error("Unauthorized");
+    const role = context?.user?.role;
+
+    if (!context?.user) {
+      throw new Error("Unauthorized");
+    }
+
+    if (role?.name !== "SUPER_ADMIN") {
+      throw new Error(
+        "Forbidden: Only SUPER_ADMIN can view gift transactions"
+      );
+    }
+
+    // ==========================================
+    // 2. VALIDATE PAGINATION
+    // ==========================================
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+    const skip = (currentPage - 1) * pageSize;
+
+    // ==========================================
+    // 3. BUILD FILTER CONDITIONS
+    // ==========================================
+
+    const {
+      senderId,
+      astrologerId,
+      streamId,
+      giftId,
+      status,
+      startDate,
+      endDate,
+    } = filters || {};
+
+    const where = {};
+
+    if (senderId?.trim()) {
+      where.senderId = senderId.trim();
+    }
+
+    if (astrologerId?.trim()) {
+      where.astrologerId = astrologerId.trim();
+    }
+
+    if (streamId?.trim()) {
+      where.streamId = streamId.trim();
+    }
+
+    if (giftId?.trim()) {
+      where.giftId = giftId.trim();
+    }
+
+    if (status?.trim()) {
+      where.status = status.trim();
+    }
+
+    // ==========================================
+    // 4. DATE FILTERING
+    // ==========================================
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+
+      if (startDate) {
+        const start = new Date(startDate);
+
+        if (Number.isNaN(start.getTime())) {
+          throw new Error("Invalid startDate");
         }
-        console.log(
-          "rolllllllllllllllllllllllllllll name          :",
-          role.name,
+
+        where.createdAt.gte = start;
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+
+        if (Number.isNaN(end.getTime())) {
+          throw new Error("Invalid endDate");
+        }
+
+        // Include the entire end date for YYYY-MM-DD.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+          end.setUTCHours(23, 59, 59, 999);
+        }
+
+        where.createdAt.lte = end;
+      }
+
+      if (
+        where.createdAt.gte &&
+        where.createdAt.lte &&
+        where.createdAt.gte > where.createdAt.lte
+      ) {
+        throw new Error(
+          "startDate must be before or equal to endDate"
         );
-        if (role.name !== "SUPER_ADMIN") {
-          throw new Error(
-            "Forbidden: Only SUPER_ADMIN can view gift transactions",
-          );
-        }
+      }
+    }
 
-        // ==========================================
-        // 2. VALIDATE PAGINATION
-        // ==========================================
+    // ==========================================
+    // 5. FETCH TRANSACTIONS, COUNT AND COIN TOTAL
+    // ==========================================
 
-        const currentPage = Math.max(1, Number(page) || 1);
+    const [transactions, totalRecords, coinAggregate] =
+      await Promise.all([
+        prisma.liveGiftTransaction.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy: [
+            { createdAt: "desc" },
+            { id: "desc" },
+          ],
+        }),
 
-        const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+        prisma.liveGiftTransaction.count({
+          where,
+        }),
 
-        const skip = (currentPage - 1) * pageSize;
+        prisma.liveGiftTransaction.aggregate({
+          where: {
+            ...where,
+            status: "SUCCESS",
+          },
+          _sum: {
+            totalCoins: true,
+          },
+        }),
+      ]);
 
-        // ==========================================
-        // 3. BUILD FILTER CONDITIONS
-        // ==========================================
+    // ==========================================
+    // 6. COLLECT UNIQUE IDS
+    // ==========================================
 
-        const {
-          senderId,
-          astrologerId,
-          streamId,
-          giftId,
-          status,
-          startDate,
-          endDate,
-        } = filters;
+    const giftIds = [
+      ...new Set(
+        transactions
+          .map((transaction) => transaction.giftId)
+          .filter(Boolean)
+      ),
+    ];
 
-        const where = {};
+    const senderIds = [
+      ...new Set(
+        transactions
+          .map((transaction) => transaction.senderId)
+          .filter(Boolean)
+      ),
+    ];
 
-        if (senderId?.trim()) {
-          where.senderId = senderId.trim();
-        }
+    const astrologerIds = [
+      ...new Set(
+        transactions
+          .map((transaction) => transaction.astrologerId)
+          .filter(Boolean)
+      ),
+    ];
 
-        if (astrologerId?.trim()) {
-          where.astrologerId = astrologerId.trim();
-        }
+    // ==========================================
+    // 7. FETCH GIFT, USER AND ASTROLOGER DETAILS
+    // ==========================================
 
-        if (streamId?.trim()) {
-          where.streamId = streamId.trim();
-        }
-
-        if (giftId?.trim()) {
-          where.giftId = giftId.trim();
-        }
-
-        if (status?.trim()) {
-          // Cast to the generated Prisma field type.
-          // This avoids hardcoding an unknown enum name.
-          where.status = status.trim();
-        }
-
-        // ==========================================
-        // 4. DATE FILTERING
-        // ==========================================
-
-        if (startDate || endDate) {
-          where.createdAt = {};
-
-          if (startDate) {
-            const start = new Date(startDate);
-
-            if (Number.isNaN(start.getTime())) {
-              throw new Error("Invalid startDate");
-            }
-
-            where.createdAt.gte = start;
-          }
-
-          if (endDate) {
-            const end = new Date(endDate);
-
-            if (Number.isNaN(end.getTime())) {
-              throw new Error("Invalid endDate");
-            }
-
-            // Include the complete specified end date
-            // when the client sends YYYY-MM-DD.
-            if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-              end.setUTCHours(23, 59, 59, 999);
-            }
-
-            where.createdAt.lte = end;
-          }
-
-          if (
-            where.createdAt.gte &&
-            where.createdAt.lte &&
-            where.createdAt.gte > where.createdAt.lte
-          ) {
-            throw new Error("startDate must be before or equal to endDate");
-          }
-        }
-
-        // ==========================================
-        // 5. FETCH TRANSACTIONS AND TOTAL COUNT
-        // ==========================================
-
-        const [transactions, totalRecords, coinAggregate] = await Promise.all([
-          prisma.liveGiftTransaction.findMany({
-            where,
-            skip,
-            take: pageSize,
-            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          }),
-
-          prisma.liveGiftTransaction.count({
-            where,
-          }),
-
-          prisma.liveGiftTransaction.aggregate({
+    const [gifts, users, astrologers] = await Promise.all([
+      // Gifts from the new Gift model.
+      giftIds.length
+        ? prisma.gift.findMany({
             where: {
-              ...where,
-              status: "SUCCESS",
+              id: {
+                in: giftIds,
+              },
             },
-            _sum: {
-              totalCoins: true,
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              amount: true,
             },
-          }),
-        ]);
+          })
+        : Promise.resolve([]),
 
-        // ==========================================
-        // 6. CALCULATE PAGINATION METADATA
-        // ==========================================
+      // Users who sent the gifts.
+      senderIds.length
+        ? prisma.user.findMany({
+            where: {
+              id: {
+                in: senderIds,
+              },
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        : Promise.resolve([]),
 
-        const totalPages = Math.ceil(totalRecords / pageSize);
+      // Astrologers who received the gifts.
+      astrologerIds.length
+        ? prisma.astrologer.findMany({
+            where: {
+              id: {
+                in: astrologerIds,
+              },
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        : Promise.resolve([]),
+    ]);
 
-        // ==========================================
-        // 7. RETURN RESPONSE
-        // ==========================================
+    // ==========================================
+    // 8. CREATE LOOKUP MAPS
+    // ==========================================
+
+    const giftMap = new Map(
+      gifts.map((gift) => [gift.id, gift])
+    );
+
+    const userMap = new Map(
+      users.map((user) => [user.id, user])
+    );
+
+    const astrologerMap = new Map(
+      astrologers.map((astrologer) => [
+        astrologer.id,
+        astrologer,
+      ])
+    );
+
+    // ==========================================
+    // 9. PAGINATION METADATA
+    // ==========================================
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    // ==========================================
+    // 10. RETURN TRANSACTIONS WITH NAMES
+    // ==========================================
+
+    return {
+      transactions: transactions.map((transaction) => {
+        const gift = giftMap.get(transaction.giftId);
+        const sender = userMap.get(transaction.senderId);
+        const astrologer = astrologerMap.get(
+          transaction.astrologerId
+        );
 
         return {
-          transactions: transactions.map((transaction) => ({
-            ...transaction,
-            createdAt: transaction.createdAt.toISOString(),
-          })),
+          ...transaction,
 
-          totalRecords,
-          totalPages,
-          currentPage,
-          limit: pageSize,
+          // Gift details.
+          giftName: gift?.name ?? "Unknown Gift",
+          giftImage: gift?.image ?? null,
+          giftAmount: gift?.amount ?? null,
 
-          totalCoins: coinAggregate._sum.totalCoins ?? 0,
+          // User who sent the gift.
+          userName: sender?.name ?? "Unknown User",
+
+          // Astrologer who received the gift.
+          astrologerName:
+            astrologer?.name ?? "Unknown Astrologer",
+
+          createdAt: transaction.createdAt.toISOString(),
         };
-      } catch (error) {
-        console.error("getLiveGiftTransactions error:", error);
+      }),
 
-        throw error;
-      }
-    },
+      totalRecords,
+      totalPages,
+      currentPage,
+      limit: pageSize,
+
+      totalCoins: coinAggregate._sum.totalCoins ?? 0,
+    };
+  } catch (error) {
+    console.error("getLiveGiftTransactions error:", error);
+    throw error;
+  }
+},
+
     getRunningLiveStreams: async (_, __, context) => {
       const liveStreams = await context.prisma.liveStream.findMany({
         where: {
@@ -6366,281 +6474,271 @@ getEndedLiveStreams: async (_, { page = 1, limit = 20 }) => {
       }));
     },
 
-getServiceBankPaymentDetails: async (_, args, context) => {
-  const { prisma } = context;
+    getServiceBankPaymentDetails: async (_, args, context) => {
+      const { prisma } = context;
 
-  try {
-    // 1. Check admin permission
-    await checkPermission(context, "servicesbankpayment.view");
+      try {
+        // 1. Check admin permission
+        await checkPermission(context, "servicesbankpayment.view");
 
-    const {
-      page = 1,
-      limit = 10,
-      serviceType,
-      status,
-      provider,
-      userId,
-      serviceId,
-      bookingId,
-      razorpayOrderId,
-      razorpayPaymentId,
-      invoiceNo,
-      country,
-      state,
-      city,
-      platform,
-      couponId,
-      search,
-      startDate,
-      endDate,
-    } = args;
+        const {
+          page = 1,
+          limit = 10,
+          serviceType,
+          status,
+          provider,
+          userId,
+          serviceId,
+          bookingId,
+          razorpayOrderId,
+          razorpayPaymentId,
+          invoiceNo,
+          country,
+          state,
+          city,
+          platform,
+          couponId,
+          search,
+          startDate,
+          endDate,
+        } = args;
 
-    // 2. Validate Prisma context
-    if (!prisma?.servicesBankPaymentLog) {
-      throw new Error(
-        "Prisma servicesBankPaymentLog model is unavailable in context"
-      );
-    }
-
-    // 3. Pagination
-    const currentPage = Math.max(1, Number(page) || 1);
-    const pageLimit = Math.min(100, Math.max(1, Number(limit) || 10));
-    const skip = (currentPage - 1) * pageLimit;
-
-    // 4. Build filters
-    const where = {};
-
-    if (serviceType) where.serviceType = serviceType;
-    if (status) where.status = status;
-    if (provider) where.provider = provider;
-    if (userId) where.userId = userId;
-    if (serviceId) where.serviceId = serviceId;
-    if (bookingId) where.bookingId = bookingId;
-    if (razorpayOrderId) where.razorpayOrderId = razorpayOrderId;
-    if (razorpayPaymentId) where.razorpayPaymentId = razorpayPaymentId;
-    if (invoiceNo) where.invoiceNo = invoiceNo;
-    if (country) where.country = country;
-    if (state) where.state = state;
-    if (city) where.city = city;
-    if (platform) where.platform = platform;
-    if (couponId) where.couponId = couponId;
-
-    // 5. Date range
-    if (startDate || endDate) {
-      where.createdAt = {};
-
-      if (startDate) {
-        const start = new Date(startDate);
-
-        if (Number.isNaN(start.getTime())) {
-          throw new Error("Invalid startDate");
+        // 2. Validate Prisma context
+        if (!prisma?.servicesBankPaymentLog) {
+          throw new Error(
+            "Prisma servicesBankPaymentLog model is unavailable in context",
+          );
         }
 
-        where.createdAt.gte = start;
-      }
+        // 3. Pagination
+        const currentPage = Math.max(1, Number(page) || 1);
+        const pageLimit = Math.min(100, Math.max(1, Number(limit) || 10));
+        const skip = (currentPage - 1) * pageLimit;
 
-      if (endDate) {
-        const end = new Date(endDate);
+        // 4. Build filters
+        const where = {};
 
-        if (Number.isNaN(end.getTime())) {
-          throw new Error("Invalid endDate");
-        }
+        if (serviceType) where.serviceType = serviceType;
+        if (status) where.status = status;
+        if (provider) where.provider = provider;
+        if (userId) where.userId = userId;
+        if (serviceId) where.serviceId = serviceId;
+        if (bookingId) where.bookingId = bookingId;
+        if (razorpayOrderId) where.razorpayOrderId = razorpayOrderId;
+        if (razorpayPaymentId) where.razorpayPaymentId = razorpayPaymentId;
+        if (invoiceNo) where.invoiceNo = invoiceNo;
+        if (country) where.country = country;
+        if (state) where.state = state;
+        if (city) where.city = city;
+        if (platform) where.platform = platform;
+        if (couponId) where.couponId = couponId;
 
-        // Include the complete date for YYYY-MM-DD input.
-        if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-          end.setUTCHours(23, 59, 59, 999);
-        }
+        // 5. Date range
+        if (startDate || endDate) {
+          where.createdAt = {};
 
-        where.createdAt.lte = end;
-      }
+          if (startDate) {
+            const start = new Date(startDate);
 
-      if (
-        where.createdAt.gte &&
-        where.createdAt.lte &&
-        where.createdAt.gte > where.createdAt.lte
-      ) {
-        throw new Error("startDate cannot be greater than endDate");
-      }
-    }
-
-    // 6. Search across payment identifiers
-    if (search && String(search).trim()) {
-      const searchTerm = String(search).trim();
-
-      where.AND = [
-        {
-          OR: [
-            {
-              userId: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-            {
-              serviceId: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-            {
-              bookingId: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-            {
-              razorpayOrderId: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-            {
-              razorpayPaymentId: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-            {
-              invoiceNo: {
-                contains: searchTerm,
-                mode: "insensitive",
-              },
-            },
-          ],
-        },
-      ];
-    }
-
-    // 7. Fetch payment records, count, and financial totals
-    const [
-      paymentLogs,
-      totalRecords,
-      aggregate,
-    ] = await Promise.all([
-      prisma.servicesBankPaymentLog.findMany({
-        where,
-        skip,
-        take: pageLimit,
-        orderBy: {
-          createdAt: "desc",
-        },
-      }),
-
-      prisma.servicesBankPaymentLog.count({
-        where,
-      }),
-
-      prisma.servicesBankPaymentLog.aggregate({
-        where,
-        _sum: {
-          amount: true,
-          taxableAmount: true,
-          totalTax: true,
-          pgCharge: true,
-          pgIgst: true,
-          pgTotal: true,
-          receivableAmount: true,
-          discount: true,
-          cashback: true,
-        },
-      }),
-    ]);
-
-    // 8. Resolve service names
-    const data = await Promise.all(
-      paymentLogs.map(async (payment) => {
-        let serviceName = null;
-
-        try {
-          if (payment.serviceId) {
-            if (payment.serviceType === "PUJA") {
-              // PujaService has a "title" field, not "name".
-              const pujaService = await prisma.pujaService.findUnique({
-                where: {
-                  id: payment.serviceId,
-                },
-                select: {
-                  title: true,
-                },
-              });
-
-              serviceName = pujaService?.title ?? null;
-            } else if (payment.serviceType === "HEALING") {
-              // Service has a "name" field.
-              const service = await prisma.service.findUnique({
-                where: {
-                  id: payment.serviceId,
-                },
-                select: {
-                  name: true,
-                },
-              });
-
-              serviceName = service?.name ?? null;
+            if (Number.isNaN(start.getTime())) {
+              throw new Error("Invalid startDate");
             }
+
+            where.createdAt.gte = start;
           }
-        } catch (serviceError) {
-          console.error("Failed to fetch service name:", {
-            serviceId: payment.serviceId,
-            serviceType: payment.serviceType,
-            error: serviceError.message,
-          });
+
+          if (endDate) {
+            const end = new Date(endDate);
+
+            if (Number.isNaN(end.getTime())) {
+              throw new Error("Invalid endDate");
+            }
+
+            // Include the complete date for YYYY-MM-DD input.
+            if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+              end.setUTCHours(23, 59, 59, 999);
+            }
+
+            where.createdAt.lte = end;
+          }
+
+          if (
+            where.createdAt.gte &&
+            where.createdAt.lte &&
+            where.createdAt.gte > where.createdAt.lte
+          ) {
+            throw new Error("startDate cannot be greater than endDate");
+          }
         }
 
-        return {
-          ...payment,
-          serviceName,
+        // 6. Search across payment identifiers
+        if (search && String(search).trim()) {
+          const searchTerm = String(search).trim();
+
+          where.AND = [
+            {
+              OR: [
+                {
+                  userId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  serviceId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  bookingId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  razorpayOrderId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  razorpayPaymentId: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  invoiceNo: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          ];
+        }
+
+        // 7. Fetch payment records, count, and financial totals
+        const [paymentLogs, totalRecords, aggregate] = await Promise.all([
+          prisma.servicesBankPaymentLog.findMany({
+            where,
+            skip,
+            take: pageLimit,
+            orderBy: {
+              createdAt: "desc",
+            },
+          }),
+
+          prisma.servicesBankPaymentLog.count({
+            where,
+          }),
+
+          prisma.servicesBankPaymentLog.aggregate({
+            where,
+            _sum: {
+              amount: true,
+              taxableAmount: true,
+              totalTax: true,
+              pgCharge: true,
+              pgIgst: true,
+              pgTotal: true,
+              receivableAmount: true,
+              discount: true,
+              cashback: true,
+            },
+          }),
+        ]);
+
+        // 8. Resolve service names
+        const data = await Promise.all(
+          paymentLogs.map(async (payment) => {
+            let serviceName = null;
+
+            try {
+              if (payment.serviceId) {
+                if (payment.serviceType === "PUJA") {
+                  // PujaService has a "title" field, not "name".
+                  const pujaService = await prisma.pujaService.findUnique({
+                    where: {
+                      id: payment.serviceId,
+                    },
+                    select: {
+                      title: true,
+                    },
+                  });
+
+                  serviceName = pujaService?.title ?? null;
+                } else if (payment.serviceType === "HEALING") {
+                  // Service has a "name" field.
+                  const service = await prisma.service.findUnique({
+                    where: {
+                      id: payment.serviceId,
+                    },
+                    select: {
+                      name: true,
+                    },
+                  });
+
+                  serviceName = service?.name ?? null;
+                }
+              }
+            } catch (serviceError) {
+              console.error("Failed to fetch service name:", {
+                serviceId: payment.serviceId,
+                serviceType: payment.serviceType,
+                error: serviceError.message,
+              });
+            }
+
+            return {
+              ...payment,
+              serviceName,
+            };
+          }),
+        );
+
+        // 9. Normalize Prisma Decimal/null values for financial summaries
+        const sums = aggregate._sum || {};
+
+        const numberOrZero = (value) => {
+          if (value == null) return 0;
+
+          const number = Number(value);
+
+          return Number.isFinite(number) ? number : 0;
         };
-      })
-    );
 
-    // 9. Normalize Prisma Decimal/null values for financial summaries
-    const sums = aggregate._sum || {};
+        // 10. Return response
+        return {
+          success: true,
+          message: "Service bank payment details fetched successfully",
 
-    const numberOrZero = (value) => {
-      if (value == null) return 0;
+          data,
 
-      const number = Number(value);
+          pagination: {
+            totalRecords,
+            totalPages: Math.ceil(totalRecords / pageLimit),
+            currentPage,
+            limit: pageLimit,
 
-      return Number.isFinite(number) ? number : 0;
-    };
+            totalAmount: numberOrZero(sums.amount),
+            totalTaxableAmount: numberOrZero(sums.taxableAmount),
+            totalTax: numberOrZero(sums.totalTax),
+            totalPgCharge: numberOrZero(sums.pgCharge),
+            totalPgIgst: numberOrZero(sums.pgIgst),
+            totalPgAmount: numberOrZero(sums.pgTotal),
+            totalReceivableAmount: numberOrZero(sums.receivableAmount),
+            totalDiscount: numberOrZero(sums.discount),
+            totalCashback: numberOrZero(sums.cashback),
+          },
+        };
+      } catch (error) {
+        console.error("Error fetching service bank payment details:", error);
 
-    // 10. Return response
-    return {
-      success: true,
-      message: "Service bank payment details fetched successfully",
-
-      data,
-
-      pagination: {
-        totalRecords,
-        totalPages: Math.ceil(totalRecords / pageLimit),
-        currentPage,
-        limit: pageLimit,
-
-        totalAmount: numberOrZero(sums.amount),
-        totalTaxableAmount: numberOrZero(sums.taxableAmount),
-        totalTax: numberOrZero(sums.totalTax),
-        totalPgCharge: numberOrZero(sums.pgCharge),
-        totalPgIgst: numberOrZero(sums.pgIgst),
-        totalPgAmount: numberOrZero(sums.pgTotal),
-        totalReceivableAmount: numberOrZero(sums.receivableAmount),
-        totalDiscount: numberOrZero(sums.discount),
-        totalCashback: numberOrZero(sums.cashback),
-      },
-    };
-  } catch (error) {
-    console.error(
-      "Error fetching service bank payment details:",
-      error
-    );
-
-    throw error;
-  }
-},
-
-
-
+        throw error;
+      }
+    },
   },
 
   // **********************************************START MUTATION**********************************
@@ -8808,7 +8906,6 @@ getServiceBankPaymentDetails: async (_, args, context) => {
             isActive: input.isActive ?? true,
             hideAfterFirstRecharge: input.hideAfterFirstRecharge ?? false,
             isFirstTimeOffer: input.isFirstTimeOffer ?? false,
-            
           },
         });
 
@@ -10968,122 +11065,113 @@ getServiceBankPaymentDetails: async (_, args, context) => {
       });
     },
 
- 
-createPujaService: async (_, args, context) => {
-  const prisma = context.prisma;
+    createPujaService: async (_, args, context) => {
+      const prisma = context.prisma;
 
-  const mantraOptions = cleanMantraOptions(args.mantraOptions);
-  const { price, mrp, discount } = getPujaPricing(
-    mantraOptions,
-    args
-  );
-  const faqs = cleanFAQs(args.faqs);
+      const mantraOptions = cleanMantraOptions(args.mantraOptions);
+      const { price, mrp, discount } = getPujaPricing(mantraOptions, args);
+      const faqs = cleanFAQs(args.faqs);
 
-  try {
-    return await prisma.pujaService.create({
-      data: {
-        title: args.title.trim(),
-        slug: args.slug.trim(),
-        image: args.image.trim(),
-        category: optionalText(args.category),
+      try {
+        return await prisma.pujaService.create({
+          data: {
+            title: args.title.trim(),
+            slug: args.slug.trim(),
+            image: args.image.trim(),
+            category: optionalText(args.category),
 
-        shortDescription: optionalText(args.shortDescription),
-        description: optionalText(args.description),
-        benefits: optionalText(args.benefits),
-        howToPerform: optionalText(args.howToPerform),
-        packaging: optionalText(args.packaging),
+            shortDescription: optionalText(args.shortDescription),
+            description: optionalText(args.description),
+            benefits: optionalText(args.benefits),
+            howToPerform: optionalText(args.howToPerform),
+            packaging: optionalText(args.packaging),
 
-        // Derived from the first sorted mantra option.
-        price,
-        mrp,
-        discount,
+            // Derived from the first sorted mantra option.
+            price,
+            mrp,
+            discount,
 
-        customersCount: args.customersCount ?? 0,
-        rating: args.rating ?? 0,
+            customersCount: args.customersCount ?? 0,
+            rating: args.rating ?? 0,
 
-        mantraOptions: {
-          create: mantraOptions,
-        },
+            mantraOptions: {
+              create: mantraOptions,
+            },
 
-        faqs: {
-          create: faqs,
-        },
-      },
-      include: pujaInclude,
-    });
-  } catch (error) {
-    handlePrismaError(error);
-  }
-},
-
+            faqs: {
+              create: faqs,
+            },
+          },
+          include: pujaInclude,
+        });
+      } catch (error) {
+        handlePrismaError(error);
+      }
+    },
 
     // ==========================================
     // UPDATE PUJA
     // ==========================================
 
-updatePujaService: async (_, { id, ...args }, context) => {
-  const prisma = context.prisma;
+    updatePujaService: async (_, { id, ...args }, context) => {
+      const prisma = context.prisma;
 
-  const mantraOptions = cleanMantraOptions(args.mantraOptions);
-  const { price, mrp, discount } = getPujaPricing(
-    mantraOptions,
-    args
-  );
-  const faqs = cleanFAQs(args.faqs);
+      const mantraOptions = cleanMantraOptions(args.mantraOptions);
+      const { price, mrp, discount } = getPujaPricing(mantraOptions, args);
+      const faqs = cleanFAQs(args.faqs);
 
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const existing = await tx.pujaService.findUnique({
-        where: { id },
-        select: { id: true },
-      });
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const existing = await tx.pujaService.findUnique({
+            where: { id },
+            select: { id: true },
+          });
 
-      if (!existing) {
-        throw new GraphQLError("Puja Service not found.", {
-          extensions: { code: "NOT_FOUND" },
+          if (!existing) {
+            throw new GraphQLError("Puja Service not found.", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
+
+          return tx.pujaService.update({
+            where: { id },
+            data: {
+              title: args.title.trim(),
+              slug: args.slug.trim(),
+              image: args.image.trim(),
+              category: optionalText(args.category),
+
+              shortDescription: optionalText(args.shortDescription),
+              description: optionalText(args.description),
+              benefits: optionalText(args.benefits),
+              howToPerform: optionalText(args.howToPerform),
+              packaging: optionalText(args.packaging),
+
+              // Derived from the first sorted mantra option.
+              price,
+              mrp,
+              discount,
+
+              customersCount: args.customersCount ?? 0,
+              rating: args.rating ?? 0,
+
+              mantraOptions: {
+                deleteMany: {},
+                create: mantraOptions,
+              },
+
+              faqs: {
+                deleteMany: {},
+                create: faqs,
+              },
+            },
+            include: pujaInclude,
+          });
         });
+      } catch (error) {
+        handlePrismaError(error);
       }
-
-      return tx.pujaService.update({
-        where: { id },
-        data: {
-          title: args.title.trim(),
-          slug: args.slug.trim(),
-          image: args.image.trim(),
-          category: optionalText(args.category),
-
-          shortDescription: optionalText(args.shortDescription),
-          description: optionalText(args.description),
-          benefits: optionalText(args.benefits),
-          howToPerform: optionalText(args.howToPerform),
-          packaging: optionalText(args.packaging),
-
-          // Derived from the first sorted mantra option.
-          price,
-          mrp,
-          discount,
-
-          customersCount: args.customersCount ?? 0,
-          rating: args.rating ?? 0,
-
-          mantraOptions: {
-            deleteMany: {},
-            create: mantraOptions,
-          },
-
-          faqs: {
-            deleteMany: {},
-            create: faqs,
-          },
-        },
-        include: pujaInclude,
-      });
-    });
-  } catch (error) {
-    handlePrismaError(error);
-  }
-},
-
+    },
 
     // ==========================================
     // DELETE PUJA

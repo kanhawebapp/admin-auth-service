@@ -2515,36 +2515,46 @@ const typeDefs = gql`
     profilePic: String
   }
 
-  type LiveGiftTransaction {
-    id: ID!
-    streamId: String!
-    senderId: String
-    astrologerId: String
-    giftId: String
-    quantity: Int
-    totalCoins: Float
-    status: String
-    createdAt: String
-  }
-
   input LiveGiftTransactionFilterInput {
-    senderId: ID
-    astrologerId: ID
-    streamId: ID
-    giftId: ID
-    status: String
-    startDate: String
-    endDate: String
-  }
+  senderId: ID
+  astrologerId: ID
+  streamId: ID
+  giftId: ID
+  status: String
+  startDate: String
+  endDate: String
+}
 
-  type LiveGiftTransactionPagination {
-    transactions: [LiveGiftTransaction!]!
-    totalRecords: Int!
-    totalPages: Int!
-    currentPage: Int!
-    limit: Int!
-    totalCoins: Float!
-  }
+type LiveGiftTransaction {
+  id: ID!
+  streamId: ID!
+  senderId: ID!
+  astrologerId: ID!
+  giftId: ID!
+
+  # Gift details
+  giftName: String
+  giftImage: String
+  giftAmount: Int
+
+  # Sender and receiver details
+  userName: String
+  astrologerName: String
+
+  quantity: Int!
+  totalCoins: Float!
+  status: String!
+  createdAt: String!
+}
+
+type LiveGiftTransactionPagination {
+  transactions: [LiveGiftTransaction!]!
+  totalRecords: Int!
+  totalPages: Int!
+  currentPage: Int!
+  limit: Int!
+  totalCoins: Float!
+}
 
   type RunningLiveStreamAstrologer {
     id: ID!
