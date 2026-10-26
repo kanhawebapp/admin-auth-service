@@ -5995,6 +5995,7 @@ export const resolvers = {
                 select: {
                   id: true,
                   name: true,
+                  displayName:true,
                 },
               },
             },
