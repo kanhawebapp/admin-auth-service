@@ -2495,6 +2495,7 @@ const typeDefs = gql`
     startedAt: String
     endedAt: String
     totalViews: Int
+    isDeleted: Boolean
 
     astrologer: LiveStreamAstrologer
   }
