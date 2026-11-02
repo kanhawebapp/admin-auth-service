@@ -7648,7 +7648,12 @@ getLiveGiftTransactions: async (
                   increment: payoutAmount,
                 },
 
+                totalWithdrawn: {
+                  increment: payoutAmount,
+                },
+
                 lastPaidAmount: payoutAmount,
+
               },
             });
 
