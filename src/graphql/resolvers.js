@@ -2890,7 +2890,7 @@ export const resolvers = {
         let runningBalance = Number(
           data[0]?.astrologerWallet?.balanceCoins ?? 0,
         );
-
+        console.log("runningBalance---------:",runningBalance);
         // --------------------------------
         // CALCULATE TRANSACTION BALANCE
         // --------------------------------
@@ -2922,12 +2922,14 @@ export const resolvers = {
 
         const updatedData = data.map((transaction) => {
           const transactionCoins = Number(transaction.coins || 0);
+          console.log("transactionCoins---------:",transactionCoins);
 
           // --------------------------------
           // BALANCE AFTER TRANSACTION
           // --------------------------------
 
           const balanceAfterTransaction = runningBalance;
+          console.log("balanceAfterTransaction---------:",balanceAfterTransaction);
 
           // --------------------------------
           // CALCULATE PREVIOUS BALANCE
@@ -2936,6 +2938,7 @@ export const resolvers = {
           switch (transaction.type) {
             case "CREDIT":
               // CREDIT increased astrologer's wallet
+              console.log("CREDIT---------:");
               runningBalance -= transactionCoins;
               break;
 
@@ -2950,6 +2953,7 @@ export const resolvers = {
               break;
 
             default:
+              console.log("DEFAULT---------:");
               // Unknown transaction type
               // Do not modify balance
               break;
