@@ -2890,7 +2890,7 @@ export const resolvers = {
         let runningBalance = Number(
           data[0]?.astrologerWallet?.balanceCoins ?? 0,
         );
-        console.log("runningBalance---------:",runningBalance);
+        console.log("runningBalance---------:", runningBalance);
         // --------------------------------
         // CALCULATE TRANSACTION BALANCE
         // --------------------------------
@@ -5995,7 +5995,7 @@ export const resolvers = {
                 select: {
                   id: true,
                   name: true,
-                  displayName:true,
+                  displayName: true,
                 },
               },
             },
@@ -6152,296 +6152,280 @@ export const resolvers = {
         throw error;
       }
     },
-   
-getLiveGiftTransactions: async (
-  _,
-  { page = 1, limit = 20, filters = {} },
-  context
-) => {
-  try {
-    // ==========================================
-    // 1. ADMIN AUTHORIZATION
-    // ==========================================
 
-    const role = context?.user?.role;
+    getLiveGiftTransactions: async (
+      _,
+      { page = 1, limit = 20, filters = {} },
+      context,
+    ) => {
+      try {
+        // ==========================================
+        // 1. ADMIN AUTHORIZATION
+        // ==========================================
 
-    if (!context?.user) {
-      throw new Error("Unauthorized");
-    }
+        const role = context?.user?.role;
 
-    if (role?.name !== "SUPER_ADMIN") {
-      throw new Error(
-        "Forbidden: Only SUPER_ADMIN can view gift transactions"
-      );
-    }
-
-    // ==========================================
-    // 2. VALIDATE PAGINATION
-    // ==========================================
-
-    const currentPage = Math.max(1, Number(page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
-    const skip = (currentPage - 1) * pageSize;
-
-    // ==========================================
-    // 3. BUILD FILTER CONDITIONS
-    // ==========================================
-
-    const {
-      senderId,
-      astrologerId,
-      streamId,
-      giftId,
-      status,
-      startDate,
-      endDate,
-    } = filters || {};
-
-    const where = {};
-
-    if (senderId?.trim()) {
-      where.senderId = senderId.trim();
-    }
-
-    if (astrologerId?.trim()) {
-      where.astrologerId = astrologerId.trim();
-    }
-
-    if (streamId?.trim()) {
-      where.streamId = streamId.trim();
-    }
-
-    if (giftId?.trim()) {
-      where.giftId = giftId.trim();
-    }
-
-    if (status?.trim()) {
-      where.status = status.trim();
-    }
-
-    // ==========================================
-    // 4. DATE FILTERING
-    // ==========================================
-
-    if (startDate || endDate) {
-      where.createdAt = {};
-
-      if (startDate) {
-        const start = new Date(startDate);
-
-        if (Number.isNaN(start.getTime())) {
-          throw new Error("Invalid startDate");
+        if (!context?.user) {
+          throw new Error("Unauthorized");
         }
 
-        where.createdAt.gte = start;
-      }
-
-      if (endDate) {
-        const end = new Date(endDate);
-
-        if (Number.isNaN(end.getTime())) {
-          throw new Error("Invalid endDate");
+        if (role?.name !== "SUPER_ADMIN") {
+          throw new Error(
+            "Forbidden: Only SUPER_ADMIN can view gift transactions",
+          );
         }
 
-        // Include the entire end date for YYYY-MM-DD.
-        if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-          end.setUTCHours(23, 59, 59, 999);
+        // ==========================================
+        // 2. VALIDATE PAGINATION
+        // ==========================================
+
+        const currentPage = Math.max(1, Number(page) || 1);
+        const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+        const skip = (currentPage - 1) * pageSize;
+
+        // ==========================================
+        // 3. BUILD FILTER CONDITIONS
+        // ==========================================
+
+        const {
+          senderId,
+          astrologerId,
+          streamId,
+          giftId,
+          status,
+          startDate,
+          endDate,
+        } = filters || {};
+
+        const where = {};
+
+        if (senderId?.trim()) {
+          where.senderId = senderId.trim();
         }
 
-        where.createdAt.lte = end;
-      }
+        if (astrologerId?.trim()) {
+          where.astrologerId = astrologerId.trim();
+        }
 
-      if (
-        where.createdAt.gte &&
-        where.createdAt.lte &&
-        where.createdAt.gte > where.createdAt.lte
-      ) {
-        throw new Error(
-          "startDate must be before or equal to endDate"
+        if (streamId?.trim()) {
+          where.streamId = streamId.trim();
+        }
+
+        if (giftId?.trim()) {
+          where.giftId = giftId.trim();
+        }
+
+        if (status?.trim()) {
+          where.status = status.trim();
+        }
+
+        // ==========================================
+        // 4. DATE FILTERING
+        // ==========================================
+
+        if (startDate || endDate) {
+          where.createdAt = {};
+
+          if (startDate) {
+            const start = new Date(startDate);
+
+            if (Number.isNaN(start.getTime())) {
+              throw new Error("Invalid startDate");
+            }
+
+            where.createdAt.gte = start;
+          }
+
+          if (endDate) {
+            const end = new Date(endDate);
+
+            if (Number.isNaN(end.getTime())) {
+              throw new Error("Invalid endDate");
+            }
+
+            // Include the entire end date for YYYY-MM-DD.
+            if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+              end.setUTCHours(23, 59, 59, 999);
+            }
+
+            where.createdAt.lte = end;
+          }
+
+          if (
+            where.createdAt.gte &&
+            where.createdAt.lte &&
+            where.createdAt.gte > where.createdAt.lte
+          ) {
+            throw new Error("startDate must be before or equal to endDate");
+          }
+        }
+
+        // ==========================================
+        // 5. FETCH TRANSACTIONS, COUNT AND COIN TOTAL
+        // ==========================================
+
+        const [transactions, totalRecords, coinAggregate] = await Promise.all([
+          prisma.liveGiftTransaction.findMany({
+            where,
+            skip,
+            take: pageSize,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          }),
+
+          prisma.liveGiftTransaction.count({
+            where,
+          }),
+
+          prisma.liveGiftTransaction.aggregate({
+            where: {
+              ...where,
+              status: "SUCCESS",
+            },
+            _sum: {
+              totalCoins: true,
+            },
+          }),
+        ]);
+
+        // ==========================================
+        // 6. COLLECT UNIQUE IDS
+        // ==========================================
+
+        const giftIds = [
+          ...new Set(
+            transactions
+              .map((transaction) => transaction.giftId)
+              .filter(Boolean),
+          ),
+        ];
+
+        const senderIds = [
+          ...new Set(
+            transactions
+              .map((transaction) => transaction.senderId)
+              .filter(Boolean),
+          ),
+        ];
+
+        const astrologerIds = [
+          ...new Set(
+            transactions
+              .map((transaction) => transaction.astrologerId)
+              .filter(Boolean),
+          ),
+        ];
+
+        // ==========================================
+        // 7. FETCH GIFT, USER AND ASTROLOGER DETAILS
+        // ==========================================
+
+        const [gifts, users, astrologers] = await Promise.all([
+          // Gifts from the new Gift model.
+          giftIds.length
+            ? prisma.gift.findMany({
+                where: {
+                  id: {
+                    in: giftIds,
+                  },
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                  amount: true,
+                },
+              })
+            : Promise.resolve([]),
+
+          // Users who sent the gifts.
+          senderIds.length
+            ? prisma.user.findMany({
+                where: {
+                  id: {
+                    in: senderIds,
+                  },
+                },
+                select: {
+                  id: true,
+                  name: true,
+                },
+              })
+            : Promise.resolve([]),
+
+          // Astrologers who received the gifts.
+          astrologerIds.length
+            ? prisma.astrologer.findMany({
+                where: {
+                  id: {
+                    in: astrologerIds,
+                  },
+                },
+                select: {
+                  id: true,
+                  displayName: true,
+                },
+              })
+            : Promise.resolve([]),
+        ]);
+
+        // ==========================================
+        // 8. CREATE LOOKUP MAPS
+        // ==========================================
+
+        const giftMap = new Map(gifts.map((gift) => [gift.id, gift]));
+
+        const userMap = new Map(users.map((user) => [user.id, user]));
+
+        const astrologerMap = new Map(
+          astrologers.map((astrologer) => [astrologer.id, astrologer]),
         );
-      }
-    }
 
-    // ==========================================
-    // 5. FETCH TRANSACTIONS, COUNT AND COIN TOTAL
-    // ==========================================
+        // ==========================================
+        // 9. PAGINATION METADATA
+        // ==========================================
 
-    const [transactions, totalRecords, coinAggregate] =
-      await Promise.all([
-        prisma.liveGiftTransaction.findMany({
-          where,
-          skip,
-          take: pageSize,
-          orderBy: [
-            { createdAt: "desc" },
-            { id: "desc" },
-          ],
-        }),
+        const totalPages = Math.ceil(totalRecords / pageSize);
 
-        prisma.liveGiftTransaction.count({
-          where,
-        }),
-
-        prisma.liveGiftTransaction.aggregate({
-          where: {
-            ...where,
-            status: "SUCCESS",
-          },
-          _sum: {
-            totalCoins: true,
-          },
-        }),
-      ]);
-
-    // ==========================================
-    // 6. COLLECT UNIQUE IDS
-    // ==========================================
-
-    const giftIds = [
-      ...new Set(
-        transactions
-          .map((transaction) => transaction.giftId)
-          .filter(Boolean)
-      ),
-    ];
-
-    const senderIds = [
-      ...new Set(
-        transactions
-          .map((transaction) => transaction.senderId)
-          .filter(Boolean)
-      ),
-    ];
-
-    const astrologerIds = [
-      ...new Set(
-        transactions
-          .map((transaction) => transaction.astrologerId)
-          .filter(Boolean)
-      ),
-    ];
-
-    // ==========================================
-    // 7. FETCH GIFT, USER AND ASTROLOGER DETAILS
-    // ==========================================
-
-    const [gifts, users, astrologers] = await Promise.all([
-      // Gifts from the new Gift model.
-      giftIds.length
-        ? prisma.gift.findMany({
-            where: {
-              id: {
-                in: giftIds,
-              },
-            },
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              amount: true,
-            },
-          })
-        : Promise.resolve([]),
-
-      // Users who sent the gifts.
-      senderIds.length
-        ? prisma.user.findMany({
-            where: {
-              id: {
-                in: senderIds,
-              },
-            },
-            select: {
-              id: true,
-              name: true,
-            },
-          })
-        : Promise.resolve([]),
-
-      // Astrologers who received the gifts.
-      astrologerIds.length
-        ? prisma.astrologer.findMany({
-            where: {
-              id: {
-                in: astrologerIds,
-              },
-            },
-            select: {
-              id: true,
-              displayName: true,
-            },
-          })
-        : Promise.resolve([]),
-    ]);
-
-    // ==========================================
-    // 8. CREATE LOOKUP MAPS
-    // ==========================================
-
-    const giftMap = new Map(
-      gifts.map((gift) => [gift.id, gift])
-    );
-
-    const userMap = new Map(
-      users.map((user) => [user.id, user])
-    );
-
-    const astrologerMap = new Map(
-      astrologers.map((astrologer) => [
-        astrologer.id,
-        astrologer,
-      ])
-    );
-
-    // ==========================================
-    // 9. PAGINATION METADATA
-    // ==========================================
-
-    const totalPages = Math.ceil(totalRecords / pageSize);
-
-    // ==========================================
-    // 10. RETURN TRANSACTIONS WITH NAMES
-    // ==========================================
-
-    return {
-      transactions: transactions.map((transaction) => {
-        const gift = giftMap.get(transaction.giftId);
-        const sender = userMap.get(transaction.senderId);
-        const astrologer = astrologerMap.get(
-          transaction.astrologerId
-        );
+        // ==========================================
+        // 10. RETURN TRANSACTIONS WITH NAMES
+        // ==========================================
 
         return {
-          ...transaction,
+          transactions: transactions.map((transaction) => {
+            const gift = giftMap.get(transaction.giftId);
+            const sender = userMap.get(transaction.senderId);
+            const astrologer = astrologerMap.get(transaction.astrologerId);
 
-          // Gift details.
-          giftName: gift?.name ?? "Unknown Gift",
-          giftImage: gift?.image ?? null,
-          giftAmount: gift?.amount ?? null,
+            return {
+              ...transaction,
 
-          // User who sent the gift.
-          userName: sender?.name ?? "Unknown User",
+              // Gift details.
+              giftName: gift?.name ?? "Unknown Gift",
+              giftImage: gift?.image ?? null,
+              giftAmount: gift?.amount ?? null,
 
-          // Astrologer who received the gift.
-          astrologerName:
-            astrologer?.displayName ?? "Unknown Astrologer",
+              // User who sent the gift.
+              userName: sender?.name ?? "Unknown User",
 
-          createdAt: transaction.createdAt.toISOString(),
+              // Astrologer who received the gift.
+              astrologerName: astrologer?.displayName ?? "Unknown Astrologer",
+
+              createdAt: transaction.createdAt.toISOString(),
+            };
+          }),
+
+          totalRecords,
+          totalPages,
+          currentPage,
+          limit: pageSize,
+
+          totalCoins: coinAggregate._sum.totalCoins ?? 0,
         };
-      }),
-
-      totalRecords,
-      totalPages,
-      currentPage,
-      limit: pageSize,
-
-      totalCoins: coinAggregate._sum.totalCoins ?? 0,
-    };
-  } catch (error) {
-    console.error("getLiveGiftTransactions error:", error);
-    throw error;
-  }
-},
+      } catch (error) {
+        console.error("getLiveGiftTransactions error:", error);
+        throw error;
+      }
+    },
 
     getRunningLiveStreams: async (_, __, context) => {
       const liveStreams = await context.prisma.liveStream.findMany({
@@ -7653,7 +7637,6 @@ getLiveGiftTransactions: async (
                 },
 
                 lastPaidAmount: payoutAmount,
-
               },
             });
 
@@ -11378,8 +11361,11 @@ getLiveGiftTransactions: async (
         }
 
         // 4. Delete the live stream
-        await prisma.liveStream.delete({
+        await prisma.liveStream.update({
           where: { id },
+          data: {
+            isDeleted: true,
+          },
         });
 
         // 5. Return success
