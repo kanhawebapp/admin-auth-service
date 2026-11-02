@@ -341,7 +341,7 @@ const typeDefs = gql`
     description: String
     price: Float!
     talktime: Int!
-    coins: Int!
+    coins: Float!
     validityDays: Int!
     isActive: Boolean
     hideAfterFirstRecharge: Boolean
@@ -354,7 +354,7 @@ const typeDefs = gql`
     description: String
     price: Float!
     talktime: Int!
-    coins: Int!
+    coins: Float!
     validityDays: Int!
     isActive: Boolean!
     createdAt: DateTime
@@ -367,7 +367,7 @@ const typeDefs = gql`
     name: String
     description: String
     price: Float
-    coins: Int
+    coins: Float
     talktime: Int
     validityDays: Int
     isActive: Boolean
@@ -448,7 +448,7 @@ const typeDefs = gql`
     id: ID!
     name: String!
     description: String
-    coins: Int!
+    coins: Float!
     price: Float!
     isActive: Boolean!
     createdAt: DateTime!
@@ -904,7 +904,7 @@ const typeDefs = gql`
   type UserWallet {
     id: ID!
     userId: ID!
-    coins: Int!
+    coins: Float!
 
     user: User
 
@@ -924,8 +924,8 @@ const typeDefs = gql`
     balanceCoins: Float
     lockedCoins: Int
 
-    totalEarned: Int
-    totalWithdrawn: Int
+    totalEarned: Float
+    totalWithdrawn: Float
 
     astrologer: Astrologer
 
@@ -936,7 +936,7 @@ const typeDefs = gql`
     id: ID!
 
     amount: Float
-    coins: Int
+    coins: Float
 
     provider: String
     status: String
@@ -954,7 +954,7 @@ const typeDefs = gql`
     paymentId: ID
 
     type: String!
-    coins: Int!
+    coins: Float!
     amount: Float
     description: String
     updatedBalance: Float
@@ -995,7 +995,7 @@ const typeDefs = gql`
     updatedBalance: Float
 
     type: String!
-    coins: Int!
+    coins: Float!
     amount: Float
     description: String
 
@@ -1406,7 +1406,7 @@ const typeDefs = gql`
     invoiceNo: String
 
     amount: Float
-    coins: Int
+    coins: Float
 
     taxableAmount: Float
 
@@ -1444,7 +1444,7 @@ const typeDefs = gql`
     totalPages: Int!
 
     totalAmount: Float!
-    totalCoins: Int!
+    totalCoins: Float!
 
     paidAmount: Float!
     failedAmount: Float!
