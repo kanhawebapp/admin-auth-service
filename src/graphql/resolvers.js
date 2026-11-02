@@ -7665,6 +7665,7 @@ getLiveGiftTransactions: async (
                 coins: Math.round(payoutAmount),
 
                 type: "DEBIT",
+                description: remark?.trim(),
               },
             });
           }
