@@ -10897,7 +10897,8 @@ getLiveGiftTransactions: async (
           data: {
             astrologerWalletId: wallet.id,
             type,
-            coins: Math.round(amt),
+            //coins: Math.round(amt),
+            coins: amt,
             amount: amt,
             description: remarks,
             updatedBalance: updatedBalance,
