@@ -59,15 +59,15 @@ app.options("*", cors(corsOptions));
   // ✅ static folder
   // app.use("/uploads", express.static("uploads"));
 
-// app.use(
-//   "/uploads",
-//   express.static(path.join(__dirname, "uploads"))
-// );
-
 app.use(
   "/uploads",
-  express.static("/shared/chat-uploads")
+  express.static(path.join(__dirname, "uploads"))
 );
+
+// app.use(
+//   "/uploads",
+//   express.static("/shared/chat-uploads")
+// );
 
   // ✅ REST upload
   app.use("/api", uploadRoutes);

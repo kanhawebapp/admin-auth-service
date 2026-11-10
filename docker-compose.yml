@@ -3,16 +3,19 @@ services:
     build: .
     container_name: admin-auth-service
     restart: always
+
     env_file:
       - .env
+
     ports:
       - "8005:8005"
+
     volumes:
       - /var/www/chat-uploads:/shared/chat-uploads:ro
+      - /home/dhwaniastro/nodeapps/admin-auth-service/uploads:/app/src/uploads
 
     networks:
       - dhwaniastro-net
-
 
 networks:
   dhwaniastro-net:
