@@ -7,6 +7,7 @@ import {
 } from "../services/adminService.js";
 import { DateTimeResolver } from "graphql-scalars";
 import { connectMongo } from "../config/mongo.js";
+import { GraphQLError } from "graphql";
 
 import GraphQLUpload from "graphql-upload/GraphQLUpload.mjs";
 import GraphQLJSON from "graphql-type-json";
