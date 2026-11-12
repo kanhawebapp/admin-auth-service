@@ -1587,7 +1587,11 @@ model LiveStream {
   id String @id @default(uuid())
 
   astrologerId String
-  astrologer   Astrologer @relation(fields: [astrologerId], references: [id], onDelete: Cascade)
+  astrologer   Astrologer @relation(
+    fields: [astrologerId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   title       String
   channelName String
@@ -1595,11 +1599,14 @@ model LiveStream {
 
   status LiveStatus @default(SCHEDULED)
 
-  scheduledAt DateTime?
-  scheduledEndAt  DateTime?
-  startedAt   DateTime?
-  endedAt     DateTime?
-  totalViews   Int        @default(0)
+  scheduledAt    DateTime?
+  scheduledEndAt DateTime?
+  startedAt      DateTime?
+  endedAt        DateTime?
+
+  totalViews Int @default(0)
+
+  // Soft delete
   isDeleted Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -2092,4 +2099,56 @@ model ServicesBankPaymentLog {
   @@index([razorpayOrderId])
   @@index([status])
   @@index([createdAt])
+}
+
+
+enum LiveInteractionType {
+  AUDIO
+  VIDEO
+}
+
+enum LiveInteractionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  ENDED
+}
+
+model LiveInteractionRequest {
+  id              String   @id @default(uuid())
+
+  liveStreamId    String
+  userId          String
+  astrologerId    String
+
+  agoraUid        Int
+
+  interactionType LiveInteractionType
+  status          LiveInteractionStatus @default(PENDING)
+
+  requestedAt     DateTime @default(now())
+  acceptedAt      DateTime?
+  endedAt         DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([liveStreamId, status])
+  @@index([userId, status])
+  @@index([astrologerId, status])
+}
+
+model LiveViewerSession {
+  id           String   @id @default(uuid())
+  liveStreamId String
+  userId       String
+  agoraUid     Int
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([liveStreamId, userId])
+  @@unique([liveStreamId, agoraUid])
+  @@index([userId, expiresAt])
 }
