@@ -2676,6 +2676,84 @@ type GetServiceBankPaymentDetailsResponse {
   data: [ServicesBankPaymentLog!]!
   pagination: ServiceBankPaymentSummary!
 }
+
+
+enum LiveInteractionType {
+  AUDIO
+  VIDEO
+}
+
+enum LiveInteractionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  ENDED
+}
+
+input LiveInteractionHistorySearchInput {
+  query: String
+  sessionId: String
+  astrologerName: String
+  userId: String
+  astrologerId: String
+  status: LiveInteractionStatus
+  interactionType: LiveInteractionType
+
+  filterType: String
+  startDate: String
+  endDate: String
+
+  page: Int
+  limit: Int
+}
+
+type LiveInteractionHistoryItem {
+  sessionId: String!
+  liveStreamId: String!
+  agoraUid: Int!
+
+  userId: String!
+  userName: String!
+  mobile: String!
+
+  astrologerId: String!
+  astrologerName: String!
+
+  interactionType: LiveInteractionType!
+  status: LiveInteractionStatus!
+
+  ratePerMin: Float!
+  dhwaniEarned: Float!
+  astrologerEarned: Float!
+  chargedCoins: Float!
+
+  durationSeconds: Int!
+  billableMinutes: Int!
+
+  requestedAt: DateTime
+  acceptedAt: DateTime
+  startedAt: DateTime
+  endedAt: DateTime
+  createdAt: DateTime!
+}
+
+type LiveInteractionHistoryResponse {
+  data: [LiveInteractionHistoryItem!]!
+
+  totalCount: Int!
+  currentPage: Int!
+  totalPages: Int!
+
+  totalCoinsDeducted: Float!
+  totalDhwaniEarned: Float!
+  totalAstrologerEarned: Float!
+
+  totalAudioCalls: Int!
+  totalVideoCalls: Int!
+}
+
+
   type Query {
     getEndedLiveStreams(
       page: Int = 1
@@ -3367,12 +3445,17 @@ getServiceBankPaymentDetails(
 
     deletePujaReview(id: ID!): Boolean!
     adminDeleteScheduledLive(id: ID!): Boolean!
+
     adminUpdateScheduledLive(
       id: ID!
       title: String!
       scheduledAt: String!
       scheduledEndAt: String!
     ): LiveStream!
+    getLiveInteractionHistory(
+    searchInput: LiveInteractionHistorySearchInput
+  ): LiveInteractionHistoryResponse!
+
   }
 `;
 
