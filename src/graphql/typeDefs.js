@@ -3056,6 +3056,10 @@ getServiceBankPaymentDetails(
   endDate: DateTime
 ): GetServiceBankPaymentDetailsResponse!
 
+ getLiveInteractionHistory(
+    searchInput: LiveInteractionHistorySearchInput
+  ): LiveInteractionHistoryResponse!
+
   }
 
   type Mutation {
@@ -3452,9 +3456,7 @@ getServiceBankPaymentDetails(
       scheduledAt: String!
       scheduledEndAt: String!
     ): LiveStream!
-    getLiveInteractionHistory(
-    searchInput: LiveInteractionHistorySearchInput
-  ): LiveInteractionHistoryResponse!
+   
 
   }
 `;
