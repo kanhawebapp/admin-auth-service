@@ -49,7 +49,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpg|jpeg|png|pdf/;
+  const allowedTypes = /jpg|jpeg|png|pdf|webp/;
 
   const ext = path.extname(file.originalname).toLowerCase();
 
