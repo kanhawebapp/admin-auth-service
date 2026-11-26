@@ -2579,6 +2579,7 @@ type LiveGiftTransactionPagination {
     endedAt: String
     updatedAt: String
     totalViews: Int!
+    isDeleted: Boolean!
     astrologer: RunningLiveStreamAstrologer
   }
   type ScheduledLivesPagination {
