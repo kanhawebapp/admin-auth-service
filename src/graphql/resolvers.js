@@ -9935,36 +9935,112 @@ export const resolvers = {
 
     // dhwani services
     createService: async (_, { input }, { prisma }) => {
-      return prisma.service.create({
-        data: {
-          name: input.name,
-          slug: input.slug,
-          image: input.image,
-          description: input.description,
-          longText: input.longText,
-          price: input.price,
-          categoryId: input.categoryId || null,
-        },
-      });
+  return prisma.service.create({
+    data: {
+      name: input.name,
+      slug: input.slug,
+
+      image: input.image || null,
+      description: input.description || null,
+      longText: input.longText || null,
+      details: input.details || null,
+
+      highlights: input.highlights ?? [],
+      benefits: input.benefits ?? [],
+
+      duration: input.duration || null,
+      mode: input.mode || null,
+      bestFor: input.bestFor || null,
+      practitioner: input.practitioner || null,
+
+      howItWorks: input.howItWorks ?? [],
+      faqs: input.faqs ?? [],
+      testimonials: input.testimonials ?? [],
+
+      seoTitle: input.seoTitle || null,
+      metaDescription: input.metaDescription || null,
+      primaryKeyword: input.primaryKeyword || null,
+      supportingKeywords: input.supportingKeywords || null,
+
+      price: input.price ?? null,
+      categoryId: input.categoryId || null,
     },
+  });
+},
     updateService: async (_, { id, input }, { prisma }) => {
-      return prisma.service.update({
-        where: { id },
+  const service = await prisma.service.findUnique({
+    where: { id },
+  });
 
-        data: {
-          name: input.name,
-          slug: input.slug,
+  if (!service) {
+    throw new Error("Service not found");
+  }
 
-          image: input.image,
-          description: input.description,
-          longText: input.longText,
+  return prisma.service.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.slug !== undefined && { slug: input.slug }),
 
-          price: input.price,
+      ...(input.image !== undefined && { image: input.image }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
+      ...(input.longText !== undefined && {
+        longText: input.longText,
+      }),
+      ...(input.details !== undefined && {
+        details: input.details,
+      }),
 
-          categoryId: input.categoryId || null,
-        },
-      });
+      ...(input.highlights !== undefined && {
+        highlights: input.highlights,
+      }),
+      ...(input.benefits !== undefined && {
+        benefits: input.benefits,
+      }),
+
+      ...(input.duration !== undefined && {
+        duration: input.duration,
+      }),
+      ...(input.mode !== undefined && { mode: input.mode }),
+      ...(input.bestFor !== undefined && {
+        bestFor: input.bestFor,
+      }),
+      ...(input.practitioner !== undefined && {
+        practitioner: input.practitioner,
+      }),
+
+      ...(input.howItWorks !== undefined && {
+        howItWorks: input.howItWorks,
+      }),
+      ...(input.faqs !== undefined && { faqs: input.faqs }),
+      ...(input.testimonials !== undefined && {
+        testimonials: input.testimonials,
+      }),
+
+      ...(input.seoTitle !== undefined && {
+        seoTitle: input.seoTitle,
+      }),
+      ...(input.metaDescription !== undefined && {
+        metaDescription: input.metaDescription,
+      }),
+      ...(input.primaryKeyword !== undefined && {
+        primaryKeyword: input.primaryKeyword,
+      }),
+      ...(input.supportingKeywords !== undefined && {
+        supportingKeywords: input.supportingKeywords,
+      }),
+
+      ...(input.price !== undefined && {
+        price: input.price,
+      }),
+      ...(input.categoryId !== undefined && {
+        categoryId: input.categoryId || null,
+      }),
     },
+  });
+},
     deleteService: async (_, { id }, { prisma }) => {
       await prisma.service.delete({
         where: { id },

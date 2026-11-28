@@ -598,19 +598,36 @@ const typeDefs = gql`
   }
 
   type Service {
-    id: ID!
+  id: ID!
+  name: String!
+  slug: String!
 
-    name: String!
-    slug: String!
-    astrologerMappings: [ServiceAstrologer!]
-    image: String
-    description: String
-    longText: String
-    price: Float
-    isActive: Boolean!
+  image: String
+  description: String
+  longText: String
+  details: String
 
-    category: Category
-  }
+  highlights: [String!]
+  benefits: [ServiceBenefit!]
+
+  duration: String
+  mode: String
+  bestFor: String
+  practitioner: String
+
+  howItWorks: [String!]
+  faqs: [ServiceFAQ!]
+  testimonials: [ServiceTestimonial!]
+
+  seoTitle: String
+  metaDescription: String
+  primaryKeyword: String
+  supportingKeywords: String
+
+  price: Float
+  category: Category
+}
+
   input CreateCategoryInput {
     name: String!
     slug: String!
@@ -618,14 +635,93 @@ const typeDefs = gql`
   }
 
   input CreateServiceInput {
-    name: String!
-    slug: String!
-    image: String
-    description: String
-    longText: String
-    price: Float
-    categoryId: ID
-  }
+  name: String!
+  slug: String!
+  image: String
+  description: String
+  longText: String
+  details: String
+
+  highlights: [String!]
+  benefits: [ServiceBenefitInput!]
+
+  duration: String
+  mode: String
+  bestFor: String
+  practitioner: String
+
+  howItWorks: [String!]
+  faqs: [ServiceFAQInput!]
+  testimonials: [ServiceTestimonialInput!]
+
+  seoTitle: String
+  metaDescription: String
+  primaryKeyword: String
+  supportingKeywords: String
+
+  price: Float
+  categoryId: String
+}
+
+type ServiceBenefit {
+  title: String!
+  description: String!
+}
+
+type ServiceFAQ {
+  question: String!
+  answer: String!
+}
+
+type ServiceTestimonial {
+  content: String!
+  clientName: String
+}
+
+input ServiceBenefitInput {
+  title: String!
+  description: String!
+}
+
+input ServiceFAQInput {
+  question: String!
+  answer: String!
+}
+
+input UpdateServiceInput {
+  name: String
+  slug: String
+  image: String
+  description: String
+  longText: String
+  details: String
+
+  highlights: [String!]
+  benefits: [ServiceBenefitInput!]
+
+  duration: String
+  mode: String
+  bestFor: String
+  practitioner: String
+
+  howItWorks: [String!]
+  faqs: [ServiceFAQInput!]
+  testimonials: [ServiceTestimonialInput!]
+
+  seoTitle: String
+  metaDescription: String
+  primaryKeyword: String
+  supportingKeywords: String
+
+  price: Float
+  categoryId: String
+}
+
+input ServiceTestimonialInput {
+  content: String!
+  clientName: String
+}
+
   input ServiceAstrologerInput {
     astrologerId: ID!
     price: Float!

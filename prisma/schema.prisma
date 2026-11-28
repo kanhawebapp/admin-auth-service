@@ -602,11 +602,29 @@ model Service {
   image       String?
   description String?
   longText    String?
+  details     String?
+
+  // Service Content
+  highlights   Json?
+  benefits     Json?
+  duration     String?
+  mode         String?
+  bestFor      String?
+  practitioner String?
+  howItWorks   Json?
+  faqs         Json?
+  testimonials Json?
+
+  // SEO
+  seoTitle           String?
+  metaDescription    String?
+  primaryKeyword     String?
+  supportingKeywords String?
 
   price Float?
 
   categoryId String?
-  isActive Boolean @default(true)
+
   category           Category?           @relation(fields: [categoryId], references: [id])
   astrologerMappings ServiceAstrologer[]
   createdAt          DateTime            @default(now())
