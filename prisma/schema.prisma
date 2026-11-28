@@ -624,6 +624,7 @@ model Service {
   price Float?
 
   categoryId String?
+  isActive Boolean @default(true)
 
   category           Category?           @relation(fields: [categoryId], references: [id])
   astrologerMappings ServiceAstrologer[]

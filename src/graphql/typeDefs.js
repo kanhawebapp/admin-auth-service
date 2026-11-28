@@ -626,6 +626,7 @@ const typeDefs = gql`
 
   price: Float
   category: Category
+  isActive: Boolean!
 }
 
   input CreateCategoryInput {
