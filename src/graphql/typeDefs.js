@@ -607,6 +607,7 @@ const typeDefs = gql`
     description: String
     longText: String
     price: Float
+    isActive: Boolean!
 
     category: Category
   }
