@@ -11713,6 +11713,23 @@ export const resolvers = {
       return true;
     },
 
+    updateServiceStatus: async (_, { id, isActive }, { prisma }) => {
+      const service = await prisma.service.findUnique({
+        where: { id },
+      });
+
+      if (!service) {
+        throw new Error("Service not found");
+      }
+
+      await prisma.service.update({
+        where: { id },
+        data: { isActive },
+      });
+
+      return true;
+    },
+
     adminDeleteScheduledLive: async (_, { id }, context) => {
       const { prisma } = context;
 

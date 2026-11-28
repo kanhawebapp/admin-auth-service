@@ -3458,6 +3458,11 @@ getServiceBankPaymentDetails(
       scheduledAt: String!
       scheduledEndAt: String!
     ): LiveStream!
+
+     updateServiceStatus(
+        id: ID!
+        isActive: Boolean!
+    ): Boolean!
    
 
   }
